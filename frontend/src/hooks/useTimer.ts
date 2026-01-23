@@ -1,153 +1,128 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface UseTimerOptions {
   initialTime?: number;
-  autoStart?: boolean;
-  onTick?: (time: number) => void;
+  countDown?: boolean;
   onComplete?: () => void;
+  interval?: number;
 }
 
 interface UseTimerReturn {
   time: number;
   isRunning: boolean;
   start: () => void;
+  pause: () => void;
+  resume: () => void;
+  reset: (newTime?: number) => void;
   stop: () => void;
-  reset: () => void;
-  restart: () => void;
 }
 
-/**
- * Custom hook for managing timers (countdown or countup)
- */
-export function useTimer({
-  initialTime = 0,
-  autoStart = false,
-  onTick,
-  onComplete,
-}: UseTimerOptions = {}): UseTimerReturn {
-  const [time, setTime] = useState(initialTime);
-  const [isRunning, setIsRunning] = useState(autoStart);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
-  const accumulatedTimeRef = useRef<number>(initialTime);
+export function useTimer(options: UseTimerOptions = {}): UseTimerReturn {
+  const {
+    initialTime = 0,
+    countDown = false,
+    onComplete,
+    interval = 1000,
+  } = options;
 
-  const stop = useCallback(() => {
-    if (intervalRef.current) {
+  const [time, setTime] = useState(initialTime);
+  const [isRunning, setIsRunning] = useState(false);
+  const intervalRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const accumulatedTimeRef = useRef<number>(0);
+
+  const clearTimerInterval = useCallback(() => {
+    if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    setIsRunning(false);
-    accumulatedTimeRef.current = time;
-  }, [time]);
+  }, []);
 
   const start = useCallback(() => {
     if (isRunning) return;
 
     setIsRunning(true);
-    startTimeRef.current = performance.now();
+    startTimeRef.current = Date.now();
+    accumulatedTimeRef.current = 0;
 
-    intervalRef.current = setInterval(() => {
-      const elapsed = performance.now() - startTimeRef.current;
-      const newTime = accumulatedTimeRef.current + elapsed;
-      setTime(newTime);
-      onTick?.(newTime);
-    }, 100);
-  }, [isRunning, onTick]);
+    intervalRef.current = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current + accumulatedTimeRef.current) / interval);
 
-  const reset = useCallback(() => {
-    stop();
-    setTime(initialTime);
-    accumulatedTimeRef.current = initialTime;
-  }, [initialTime, stop]);
-
-  const restart = useCallback(() => {
-    reset();
-    start();
-  }, [reset, start]);
-
-  useEffect(() => {
-    if (autoStart) {
-      start();
-    }
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      if (countDown) {
+        const newTime = initialTime - elapsed;
+        if (newTime <= 0) {
+          setTime(0);
+          clearTimerInterval();
+          setIsRunning(false);
+          onComplete?.();
+        } else {
+          setTime(newTime);
+        }
+      } else {
+        setTime(elapsed);
       }
-    };
-  }, [autoStart, start]);
+    }, interval);
+  }, [isRunning, initialTime, countDown, interval, onComplete, clearTimerInterval]);
 
+  const pause = useCallback(() => {
+    if (!isRunning) return;
+
+    clearTimerInterval();
+    accumulatedTimeRef.current += Date.now() - startTimeRef.current;
+    setIsRunning(false);
+  }, [isRunning, clearTimerInterval]);
+
+  const resume = useCallback(() => {
+    if (isRunning) return;
+
+    setIsRunning(true);
+    startTimeRef.current = Date.now();
+
+    intervalRef.current = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTimeRef.current + accumulatedTimeRef.current) / interval);
+
+      if (countDown) {
+        const newTime = initialTime - elapsed;
+        if (newTime <= 0) {
+          setTime(0);
+          clearTimerInterval();
+          setIsRunning(false);
+          onComplete?.();
+        } else {
+          setTime(newTime);
+        }
+      } else {
+        setTime(elapsed);
+      }
+    }, interval);
+  }, [isRunning, initialTime, countDown, interval, onComplete, clearTimerInterval]);
+
+  const reset = useCallback((newTime?: number) => {
+    clearTimerInterval();
+    setIsRunning(false);
+    setTime(newTime ?? initialTime);
+    accumulatedTimeRef.current = 0;
+  }, [initialTime, clearTimerInterval]);
+
+  const stop = useCallback(() => {
+    clearTimerInterval();
+    setIsRunning(false);
+  }, [clearTimerInterval]);
+
+  // Cleanup on unmount
   useEffect(() => {
-    if (initialTime > 0 && time <= 0 && isRunning) {
-      stop();
-      onComplete?.();
-    }
-  }, [time, initialTime, isRunning, stop, onComplete]);
+    return () => {
+      clearTimerInterval();
+    };
+  }, [clearTimerInterval]);
 
   return {
     time,
     isRunning,
     start,
-    stop,
+    pause,
+    resume,
     reset,
-    restart,
-  };
-}
-
-/**
- * Custom hook for countdown timer
- */
-export function useCountdown(
-  seconds: number,
-  options: { autoStart?: boolean; onComplete?: () => void } = {}
-) {
-  const [count, setCount] = useState(seconds);
-  const [isRunning, setIsRunning] = useState(options.autoStart ?? false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const start = useCallback(() => {
-    if (isRunning || count <= 0) return;
-    setIsRunning(true);
-  }, [isRunning, count]);
-
-  const stop = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    setIsRunning(false);
-  }, []);
-
-  const reset = useCallback(() => {
-    stop();
-    setCount(seconds);
-  }, [seconds, stop]);
-
-  useEffect(() => {
-    if (!isRunning) return;
-
-    intervalRef.current = setInterval(() => {
-      setCount((prev) => {
-        if (prev <= 1) {
-          stop();
-          options.onComplete?.();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning, stop, options]);
-
-  return {
-    count,
-    isRunning,
-    start,
     stop,
-    reset,
   };
 }

@@ -1,104 +1,267 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ToastProvider } from '@/contexts/ToastContext';
-import { ToastContainer } from '@/components/ui/Toast';
-import { Layout, SessionLayout, AuthLayout } from '@/components/layout/Layout';
-import { ProtectedRoute, GuestRoute } from '@/components/layout/ProtectedRoute';
-
+import { ProtectedRoute } from '@/components/layout';
+import { initQuoteService } from '@/services/quoteService';
 import {
+  // Public pages
   LandingPage,
-  DashboardPage,
-  ProfilePage,
-  SettingsPage,
-  LeaderboardPage,
-  HistoryPage,
-  FriendsPage,
-  AchievementsPage,
-  TypingProfilePage,
-  TrainingPage,
-  TrainingSessionPage,
+  // Auth pages
   LoginPage,
   RegisterPage,
   ForgotPasswordPage,
   ResetPasswordPage,
+  // Main pages
+  DashboardPage,
+  ProfilePage,
+  SettingsPage,
+  HistoryPage,
+  LeaderboardPage,
+  AchievementsPage,
+  FriendsPage,
+  TrainingPage,
+  TrainingSessionPage,
+  TypingProfilePage,
+  // Solo pages
   SoloPracticePage,
   SoloSessionPage,
-  CompetitionPage,
-  RacePage,
+  // Private session pages
   CreatePrivateSessionPage,
   PrivateSessionLobbyPage,
+  // Competition pages
+  CompetitionPage,
+  RacePage,
 } from '@/pages';
 
-/**
- * Main application component with routing configuration
- */
-function App() {
+// Redirect authenticated users away from auth pages
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#2a2a2a] border-t-[#8b5cf6] rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   return (
-    <BrowserRouter>
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="/"
+        element={
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        }
+      />
+
+      {/* Auth routes */}
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicRoute>
+            <RegisterPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPasswordPage />
+          </PublicRoute>
+        }
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Solo Practice */}
+      <Route
+        path="/solo"
+        element={
+          <ProtectedRoute>
+            <SoloPracticePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/solo/session"
+        element={
+          <ProtectedRoute>
+            <SoloSessionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Private Sessions */}
+      <Route
+        path="/private/create"
+        element={
+          <ProtectedRoute>
+            <CreatePrivateSessionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/private/lobby/:code"
+        element={
+          <ProtectedRoute>
+            <PrivateSessionLobbyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/private/race/:code"
+        element={
+          <ProtectedRoute>
+            <RacePage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Competition */}
+      <Route
+        path="/competition"
+        element={
+          <ProtectedRoute>
+            <CompetitionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* User pages */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/history"
+        element={
+          <ProtectedRoute>
+            <HistoryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaderboard"
+        element={
+          <ProtectedRoute>
+            <LeaderboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/achievements"
+        element={
+          <ProtectedRoute>
+            <AchievementsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/friends"
+        element={
+          <ProtectedRoute>
+            <FriendsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Training */}
+      <Route
+        path="/training"
+        element={
+          <ProtectedRoute>
+            <TrainingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/training/:mode"
+        element={
+          <ProtectedRoute>
+            <TrainingSessionPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Typing Profile */}
+      <Route
+        path="/typing-profile"
+        element={
+          <ProtectedRoute>
+            <TypingProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Catch all - redirect to dashboard if authenticated, landing if not */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  // Prefetch quotes on app start for better UX
+  useEffect(() => {
+    initQuoteService();
+  }, []);
+
+  return (
+    <Router>
       <AuthProvider>
         <ToastProvider>
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-
-            <Route element={<AuthLayout />}>
-              <Route
-                path="/login"
-                element={
-                  <GuestRoute>
-                    <LoginPage />
-                  </GuestRoute>
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  <GuestRoute>
-                    <RegisterPage />
-                  </GuestRoute>
-                }
-              />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-            </Route>
-
-            <Route
-              element={
-                <ProtectedRoute>
-                  <Layout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/leaderboard" element={<LeaderboardPage />} />
-              <Route path="/history" element={<HistoryPage />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/achievements" element={<AchievementsPage />} />
-              <Route path="/typing-profile" element={<TypingProfilePage />} />
-              <Route path="/training" element={<TrainingPage />} />
-              <Route path="/solo" element={<SoloPracticePage />} />
-              <Route path="/competition" element={<CompetitionPage />} />
-              <Route path="/session/private/create" element={<CreatePrivateSessionPage />} />
-            </Route>
-
-            <Route
-              element={
-                <ProtectedRoute>
-                  <SessionLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/solo/session" element={<SoloSessionPage />} />
-              <Route path="/race/:sessionId" element={<RacePage />} />
-              <Route path="/session/private/:code" element={<PrivateSessionLobbyPage />} />
-              <Route path="/training/:moduleId" element={<TrainingSessionPage />} />
-            </Route>
-          </Routes>
-          <ToastContainer />
+          <AppRoutes />
         </ToastProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </Router>
   );
 }
 

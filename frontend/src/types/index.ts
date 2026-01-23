@@ -1,326 +1,192 @@
+// User types
 export interface User {
   id: string;
-  email: string;
   username: string;
+  email: string;
+  avatar?: string;
   createdAt: string;
-  emailVerified: boolean;
-  themePreference?: ThemePreference;
-  tutorialCompleted?: boolean;
+  stats: UserStats;
 }
 
 export interface UserStats {
-  userId: string;
-  totalPoints: number;
-  rank: number;
-  totalRaces: number;
-  wins: number;
   avgWpm: number;
   avgAccuracy: number;
   bestWpm: number;
-  totalPracticeTime: number;
   totalSessions: number;
-  skillLevel: number;
+  totalTimeTyped: number; // in seconds
+  totalCharactersTyped: number;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
+// Typing session types
+export interface TypingText {
+  id: string;
+  content: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  length: 'short' | 'medium' | 'long';
+  wordCount: number;
+  category?: string;
 }
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterCredentials {
-  email: string;
-  username: string;
-  password: string;
-  passwordConfirmation: string;
-}
-
-export interface Session {
+export interface TypingSession {
   id: string;
   userId: string;
-  sessionType: SessionType;
   textId: string;
+  text: string;
   wpm: number;
+  rawWpm: number;
   accuracy: number;
-  duration: number;
-  errorsCount: number;
+  errors: number;
+  totalCharacters: number;
+  correctCharacters: number;
+  duration: number; // in seconds
+  startedAt: string;
   completedAt: string;
-  status: SessionStatus;
-  difficulty: Difficulty;
-  textCategory: TextCategory;
-}
-
-export interface SessionResult {
-  wpm: number;
-  accuracy: number;
-  duration: number;
-  errorsCount: number;
-  correctChars: number;
-  totalChars: number;
-  wpmOverTime: WpmDataPoint[];
-  errorsByChar: CharacterError[];
+  mode: 'solo' | 'private' | 'competition';
+  wpmHistory: WpmDataPoint[];
 }
 
 export interface WpmDataPoint {
-  time: number;
+  time: number; // seconds from start
   wpm: number;
+  accuracy: number;
 }
 
-export interface CharacterError {
+// Character state for typing
+export interface CharacterState {
   char: string;
-  count: number;
-  rate: number;
+  status: 'pending' | 'correct' | 'incorrect' | 'current';
 }
 
-export interface Keystroke {
-  sessionId: string;
-  timestamp: number;
-  keyPressed: string;
-  expectedKey: string;
-  isCorrect: boolean;
-  positionInText: number;
-  wordIndex: number;
-  timeSinceLastKey: number;
-  isBackspace: boolean;
-  errorType: ErrorType | null;
+// Session configuration
+export interface SessionConfig {
+  difficulty: 'easy' | 'medium' | 'hard';
+  length: 'short' | 'medium' | 'long';
+  mode: 'solo' | 'private' | 'competition';
 }
 
-export interface Text {
-  id: string;
-  content: string;
-  difficulty: Difficulty;
-  category: TextCategory;
-  wordCount: number;
-  language: string;
-}
-
+// Private session types
 export interface PrivateSession {
   id: string;
-  hostUserId: string;
-  sessionCode: string;
+  code: string;
+  hostId: string;
+  hostName: string;
   textId: string;
-  maxParticipants: number;
-  status: PrivateSessionStatus;
-  participants: SessionParticipant[];
+  text: TypingText;
+  players: Player[];
+  status: 'waiting' | 'countdown' | 'racing' | 'finished';
+  maxPlayers: number;
   createdAt: string;
 }
 
-export interface SessionParticipant {
-  sessionId: string;
-  userId: string;
-  username: string;
-  joinedAt: string;
-  readyStatus: boolean;
-  status: ParticipantStatus;
-  progress?: number;
-  wpm?: number;
-}
-
-export interface PublicSession {
+export interface Player {
   id: string;
-  difficulty: Difficulty;
-  textId: string;
-  participants: SessionParticipant[];
-  status: PublicSessionStatus;
-  startedAt?: string;
-}
-
-export interface RaceResult {
-  sessionId: string;
-  userId: string;
   username: string;
-  rank: number;
+  avatar?: string;
+  isHost: boolean;
+  isReady: boolean;
+  progress: number; // 0-100
   wpm: number;
   accuracy: number;
-  duration: number;
-  pointsEarned: number;
+  position?: number; // final position after race
+  finishedAt?: string;
 }
 
+// Leaderboard types
 export interface LeaderboardEntry {
   rank: number;
   userId: string;
   username: string;
-  totalPoints: number;
-  racesCount: number;
-  avgWpm: number;
-  isCurrentUser?: boolean;
+  avatar?: string;
+  wpm: number;
+  accuracy: number;
+  sessionsPlayed: number;
 }
 
-export interface Friend {
-  id: string;
-  username: string;
-  status: FriendStatus;
-  createdAt: string;
-}
-
-export interface FriendRequest {
-  id: string;
-  requesterId: string;
-  requesterUsername: string;
-  receiverId: string;
-  status: FriendRequestStatus;
-  createdAt: string;
-}
-
+// Achievement types
 export interface Achievement {
   id: string;
   name: string;
   description: string;
   icon: string;
-  requirement: string;
   unlockedAt?: string;
   progress?: number;
   maxProgress?: number;
 }
 
-export interface TypingProfile {
-  userId: string;
-  skillLevel: number;
-  skillBadge: SkillBadge;
+// History filter
+export interface HistoryFilter {
+  mode?: 'all' | 'solo' | 'private' | 'competition';
+  dateRange?: 'all' | 'today' | 'week' | 'month';
+  sortBy: 'date' | 'wpm' | 'accuracy';
+  sortOrder: 'asc' | 'desc';
+}
+
+// Toast notification
+export interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  message: string;
+  duration?: number;
+}
+
+// Auth types
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
+
+// API Response types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+// Statistics for dashboard
+export interface DashboardStats {
+  totalSessions: number;
   avgWpm: number;
   avgAccuracy: number;
-  consistencyScore: number;
-  problematicChars: CharacterError[];
-  difficultSequences: DifficultSequence[];
-  errorBreakdown: ErrorBreakdown;
-  wpmProgression: WpmDataPoint[];
-  fingerStrengthScores: FingerStrengthScore[];
+  bestWpm: number;
+  totalTimeTyped: number;
+  improvementPercent: number;
+  recentSessions: TypingSession[];
+  wpmTrend: WpmDataPoint[];
 }
 
-export interface DifficultSequence {
-  sequence: string;
-  avgTime: number;
-  errorRate: number;
-  type: 'bigram' | 'trigram';
-}
-
-export interface ErrorBreakdown {
-  speed: number;
-  cognitive: number;
-  motor: number;
-  fatigue: number;
-}
-
-export interface FingerStrengthScore {
-  finger: string;
-  hand: 'left' | 'right';
-  score: number;
-}
-
-export interface Drill {
+// Friends
+export interface Friend {
   id: string;
-  userId: string;
-  drillType: DrillType;
-  content: string;
-  targetChar?: string;
-  targetSequence?: string;
-  objective: string;
+  username: string;
+  avatar?: string;
+  status: 'online' | 'offline' | 'in-game';
+  lastSeen?: string;
+  stats: {
+    avgWpm: number;
+    totalSessions: number;
+  };
+}
+
+export interface FriendRequest {
+  id: string;
+  from: {
+    id: string;
+    username: string;
+    avatar?: string;
+  };
+  status: 'pending' | 'accepted' | 'rejected';
   createdAt: string;
 }
-
-export interface TrainingPlan {
-  userId: string;
-  weekStart: string;
-  days: TrainingDay[];
-  completedDays: number;
-}
-
-export interface TrainingDay {
-  dayNumber: number;
-  activities: TrainingActivity[];
-  completed: boolean;
-}
-
-export interface TrainingActivity {
-  type: 'drill' | 'solo' | 'competition';
-  description: string;
-  drillType?: DrillType;
-  difficulty?: Difficulty;
-  completed: boolean;
-}
-
-export interface DailyInsight {
-  id: string;
-  userId: string;
-  text: string;
-  type: InsightType;
-  date: string;
-  dismissed: boolean;
-}
-
-export interface WpmPrediction {
-  userId: string;
-  predictedWpm: number;
-  confidenceInterval: number;
-  predictionDate: string;
-}
-
-export interface Notification {
-  id: string;
-  userId: string;
-  type: NotificationType;
-  content: string;
-  read: boolean;
-  createdAt: string;
-}
-
-export type SessionType = 'solo' | 'private' | 'public';
-export type SessionStatus = 'in_progress' | 'completed' | 'abandoned';
-export type Difficulty = 'easy' | 'medium' | 'hard';
-export type TextCategory = 'prose' | 'code' | 'technical' | 'quote';
-export type TextLength = 'short' | 'medium' | 'long';
-export type ErrorType = 'substitution' | 'insertion' | 'deletion';
-export type PrivateSessionStatus = 'waiting' | 'countdown' | 'in_progress' | 'finished';
-export type PublicSessionStatus = 'matchmaking' | 'countdown' | 'in_progress' | 'finished';
-export type ParticipantStatus = 'joined' | 'ready' | 'racing' | 'finished' | 'abandoned';
-export type FriendStatus = 'online' | 'offline' | 'in_game';
-export type FriendRequestStatus = 'pending' | 'accepted' | 'rejected';
-export type SkillBadge = 'beginner' | 'novice' | 'intermediate' | 'advanced' | 'expert';
-export type DrillType = 'character' | 'bigram' | 'speed' | 'accuracy';
-export type InsightType = 'improvement' | 'focus' | 'pattern' | 'warning';
-export type NotificationType = 'friend_request' | 'challenge' | 'race_found' | 'achievement' | 'insight';
-export type LeaderboardPeriod = 'all_time' | 'weekly' | 'monthly';
-export type LeaderboardType = 'global' | 'friends';
-
-export interface ThemePreference {
-  scheme: ThemeScheme;
-  accentColor: AccentColor;
-}
-
-export type ThemeScheme = 'midnight_blue' | 'deep_purple' | 'carbon_black' | 'forest_green';
-export type AccentColor = 'indigo' | 'cyan' | 'emerald' | 'amber';
-
-export interface ApiError {
-  message: string;
-  code?: string;
-  details?: Record<string, string[]>;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-}
-
-export interface WebSocketMessage {
-  type: WebSocketEventType;
-  payload: unknown;
-}
-
-export type WebSocketEventType =
-  | 'player_joined'
-  | 'player_ready'
-  | 'player_left'
-  | 'race_starting'
-  | 'race_started'
-  | 'player_progress'
-  | 'player_finished'
-  | 'race_ended'
-  | 'notification';

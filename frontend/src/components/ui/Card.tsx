@@ -1,39 +1,28 @@
-import type { HTMLAttributes, ReactNode } from 'react';
+import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-  variant?: 'default' | 'hover' | 'interactive';
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'bordered' | 'elevated';
   padding?: 'none' | 'sm' | 'md' | 'lg';
 }
 
-const paddingStyles = {
-  none: '',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
-};
+function Card({ className, variant = 'default', padding = 'md', children, ...props }: CardProps) {
+  const variants = {
+    default: 'bg-[#1a1a1a]',
+    bordered: 'bg-[#1a1a1a] border border-[#2a2a2a]',
+    elevated: 'bg-[#1a1a1a] shadow-lg shadow-black/20',
+  };
 
-/**
- * Card container component
- */
-export function Card({
-  className,
-  children,
-  variant = 'default',
-  padding = 'md',
-  ...props
-}: CardProps) {
+  const paddings = {
+    none: '',
+    sm: 'p-3',
+    md: 'p-4',
+    lg: 'p-6',
+  };
+
   return (
     <div
-      className={cn(
-        'rounded-xl bg-surface border border-border',
-        variant === 'hover' && 'hover:border-border-hover transition-colors',
-        variant === 'interactive' &&
-          'hover:border-border-hover hover:bg-surface-hover cursor-pointer transition-all',
-        paddingStyles[padding],
-        className
-      )}
+      className={cn('rounded-xl', variants[variant], paddings[padding], className)}
       {...props}
     >
       {children}
@@ -41,78 +30,31 @@ export function Card({
   );
 }
 
-interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-}
-
-/**
- * Card header component
- */
-export function CardHeader({ className, children, ...props }: CardHeaderProps) {
+function CardHeader({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn('flex flex-col gap-1.5 mb-4', className)}
-      {...props}
-    >
+    <div className={cn('mb-4', className)} {...props}>
       {children}
     </div>
   );
 }
 
-interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {
-  children: ReactNode;
-  as?: 'h1' | 'h2' | 'h3' | 'h4';
-}
-
-/**
- * Card title component
- */
-export function CardTitle({
-  className,
-  children,
-  as: Component = 'h3',
-  ...props
-}: CardTitleProps) {
+function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <Component
-      className={cn('text-lg font-semibold text-text', className)}
-      {...props}
-    >
+    <h3 className={cn('text-lg font-semibold text-white', className)} {...props}>
       {children}
-    </Component>
+    </h3>
   );
 }
 
-interface CardDescriptionProps extends HTMLAttributes<HTMLParagraphElement> {
-  children: ReactNode;
-}
-
-/**
- * Card description component
- */
-export function CardDescription({
-  className,
-  children,
-  ...props
-}: CardDescriptionProps) {
+function CardDescription({ className, children, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p
-      className={cn('text-sm text-text-secondary', className)}
-      {...props}
-    >
+    <p className={cn('text-sm text-[#a1a1aa] mt-1', className)} {...props}>
       {children}
     </p>
   );
 }
 
-interface CardContentProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-}
-
-/**
- * Card content component
- */
-export function CardContent({ className, children, ...props }: CardContentProps) {
+function CardContent({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div className={cn('', className)} {...props}>
       {children}
@@ -120,20 +62,12 @@ export function CardContent({ className, children, ...props }: CardContentProps)
   );
 }
 
-interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
-}
-
-/**
- * Card footer component
- */
-export function CardFooter({ className, children, ...props }: CardFooterProps) {
+function CardFooter({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn('flex items-center gap-4 mt-4 pt-4 border-t border-border', className)}
-      {...props}
-    >
+    <div className={cn('mt-4 flex items-center gap-2', className)} {...props}>
       {children}
     </div>
   );
 }
+
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };

@@ -1,98 +1,145 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from 'react';
-import type { User, LoginCredentials, RegisterCredentials } from '@/types';
-import { authApi, userApi, getStoredToken, clearStoredTokens } from '@/lib/api';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import type { User, AuthState, LoginCredentials, RegisterData } from '@/types';
+import { mockUser, sleep } from '@/lib/utils';
 
-interface AuthContextType {
-  user: User | null;
-  isLoading: boolean;
-  isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+interface AuthContextType extends AuthState {
+  login: (credentials: LoginCredentials) => Promise<boolean>;
+  register: (data: RegisterData) => Promise<boolean>;
+  logout: () => void;
+  updateUser: (data: Partial<User>) => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-/**
- * Authentication context provider
- */
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    isAuthenticated: false,
+    isLoading: true,
+  });
 
-  const fetchUser = useCallback(async () => {
-    const token = getStoredToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      const userData = await userApi.getMe();
-      setUser(userData);
-    } catch {
-      clearStoredTokens();
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
+  // Check for stored auth on mount
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
-
-  const login = useCallback(async (credentials: LoginCredentials) => {
-    await authApi.login(credentials);
-    await fetchUser();
-  }, [fetchUser]);
-
-  const register = useCallback(async (credentials: RegisterCredentials) => {
-    await authApi.register(credentials);
-    await fetchUser();
-  }, [fetchUser]);
-
-  const logout = useCallback(async () => {
-    await authApi.logout();
-    setUser(null);
+    const checkAuth = async () => {
+      const storedUser = localStorage.getItem('hakinga_user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          setState({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } catch {
+          localStorage.removeItem('hakinga_user');
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+    checkAuth();
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    await fetchUser();
-  }, [fetchUser]);
+  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
+    setState(prev => ({ ...prev, isLoading: true }));
 
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    isAuthenticated: !!user,
-    login,
-    register,
-    logout,
-    refreshUser,
-  };
+    // Simulate API call
+    await sleep(800);
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+    // Mock validation - accept any email with password length >= 6
+    if (credentials.email && credentials.password.length >= 6) {
+      // Create user from mock data or generate from email
+      const user: User = {
+        ...mockUser,
+        email: credentials.email,
+        username: credentials.email.split('@')[0],
+      };
 
-/**
- * Hook to access authentication context
- */
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+      localStorage.setItem('hakinga_user', JSON.stringify(user));
+
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return true;
+    }
+
+    setState(prev => ({ ...prev, isLoading: false }));
+    return false;
+  }, []);
+
+  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
+    setState(prev => ({ ...prev, isLoading: true }));
+
+    // Simulate API call
+    await sleep(1000);
+
+    // Mock validation
+    if (data.email && data.username && data.password.length >= 6 && data.password === data.confirmPassword) {
+      const user: User = {
+        id: Date.now().toString(),
+        username: data.username,
+        email: data.email,
+        createdAt: new Date().toISOString(),
+        stats: {
+          avgWpm: 0,
+          avgAccuracy: 0,
+          bestWpm: 0,
+          totalSessions: 0,
+          totalTimeTyped: 0,
+          totalCharactersTyped: 0,
+        },
+      };
+
+      localStorage.setItem('hakinga_user', JSON.stringify(user));
+
+      setState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+      return true;
+    }
+
+    setState(prev => ({ ...prev, isLoading: false }));
+    return false;
+  }, []);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('hakinga_user');
+    setState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  }, []);
+
+  const updateUser = useCallback((data: Partial<User>) => {
+    setState(prev => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, ...data };
+      localStorage.setItem('hakinga_user', JSON.stringify(updatedUser));
+      return { ...prev, user: updatedUser };
+    });
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

@@ -1,284 +1,307 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Trophy, Medal, Gauge, Target, Crown } from 'lucide-react';
+import { Layout } from '@/components/layout';
+import { TypingArea, Countdown } from '@/components/typing';
+import { Card, Progress, Avatar, Badge, Button } from '@/components/ui';
 import { useTypingSession } from '@/hooks/useTypingSession';
-import { TypingArea } from '@/components/typing/TypingArea';
-import { Countdown } from '@/components/typing/Countdown';
-import { Button } from '@/components/ui/Button';
-import { Progress } from '@/components/ui/Progress';
-import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
-import { cn, getRankColor, formatDuration } from '@/lib/utils';
-import {
-  ArrowLeft,
-  Trophy,
-  Medal,
-  Crown,
-} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { mockTexts, mockPlayers, cn, formatTime } from '@/lib/utils';
+import type { Player, TypingSession } from '@/types';
 
-interface Player {
-  id: string;
-  username: string;
-  progress: number;
-  wpm: number;
-  finished: boolean;
-  rank?: number;
-}
+type RacePhase = 'countdown' | 'racing' | 'finished';
 
-const SAMPLE_TEXT = 'La competition de dactylographie est un excellent moyen d\'ameliorer sa vitesse de frappe. Chaque course vous permet de vous mesurer a d\'autres joueurs et de progresser. Restez concentre et tapez avec precision pour obtenir le meilleur score.';
-
-const mockPlayers: Player[] = [
-  { id: '1', username: 'Vous', progress: 0, wpm: 0, finished: false },
-  { id: '2', username: 'SpeedTyper', progress: 0, wpm: 0, finished: false },
-  { id: '3', username: 'KeyMaster', progress: 0, wpm: 0, finished: false },
-  { id: '4', username: 'FlashFingers', progress: 0, wpm: 0, finished: false },
-  { id: '5', username: 'TypeNinja', progress: 0, wpm: 0, finished: false },
-];
-
-/**
- * Live race page for competition
- */
-export function RacePage() {
-  const [showCountdown, setShowCountdown] = useState(true);
-  const [players, setPlayers] = useState<Player[]>(mockPlayers);
-  const [raceFinished, setRaceFinished] = useState(false);
-  const [finalResults, setFinalResults] = useState<Player[]>([]);
+function RacePage() {
   const navigate = useNavigate();
+  const { code } = useParams<{ code: string }>();
+  const { user } = useAuth();
 
-  const handleComplete = useCallback((result: { wpm: number; accuracy: number }) => {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === '1'
-          ? { ...p, finished: true, wpm: Math.round(result.wpm), progress: 100 }
-          : p
-      )
-    );
-  }, []);
+  const [phase, setPhase] = useState<RacePhase>('countdown');
+  const [text] = useState(() => mockTexts[4]); // Medium difficulty text
+  const [players, setPlayers] = useState<Player[]>(() => [
+    {
+      id: user?.id || '1',
+      username: user?.username || 'You',
+      isHost: true,
+      isReady: true,
+      progress: 0,
+      wpm: 0,
+      accuracy: 100,
+    },
+    ...mockPlayers.slice(1, 4).map(p => ({ ...p, progress: 0, wpm: 0, accuracy: 100 })),
+  ]);
+  const [sessionResult, setSessionResult] = useState<Partial<TypingSession> | null>(null);
 
-  const handleProgress = useCallback((progress: number, wpm: number) => {
-    setPlayers((prev) =>
-      prev.map((p) =>
-        p.id === '1' ? { ...p, progress, wpm: Math.round(wpm) } : p
-      )
-    );
-  }, []);
+  // Handle session completion
+  const handleComplete = useCallback((result: Partial<TypingSession>) => {
+    setSessionResult(result);
+    setPlayers(prev => prev.map(p =>
+      p.id === user?.id
+        ? { ...p, progress: 100, wpm: result.wpm || 0, accuracy: result.accuracy || 0, position: 1 }
+        : p
+    ));
+    // Small delay before showing results
+    setTimeout(() => setPhase('finished'), 1000);
+  }, [user?.id]);
 
+  // Typing session hook
   const {
-    charStates,
+    characters,
     currentIndex,
-    isFinished,
+    isStarted,
+    wpm,
+    accuracy,
+    elapsedTime,
     handleKeyDown,
+    start,
+    progress,
   } = useTypingSession({
-    text: SAMPLE_TEXT,
+    text: text.content,
     onComplete: handleComplete,
-    onProgress: handleProgress,
   });
 
+  // Handle keyboard events
   useEffect(() => {
-    if (showCountdown) return;
+    if (phase !== 'racing') return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (!isStarted && phase === 'racing') {
+        start();
+      }
+      handleKeyDown(e);
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [phase, isStarted, start, handleKeyDown]);
+
+  // Update own progress
+  useEffect(() => {
+    if (phase === 'racing') {
+      setPlayers(prev => prev.map(p =>
+        p.id === user?.id
+          ? { ...p, progress, wpm, accuracy }
+          : p
+      ));
+    }
+  }, [progress, wpm, accuracy, user?.id, phase]);
+
+  // Simulate other players' progress
+  useEffect(() => {
+    if (phase !== 'racing') return;
 
     const interval = setInterval(() => {
-      setPlayers((prev) =>
-        prev.map((p) => {
-          if (p.id === '1' || p.finished) return p;
+      setPlayers(prev => prev.map(p => {
+        if (p.id === user?.id || p.progress >= 100) return p;
 
-          const speedMultiplier = 0.5 + Math.random() * 0.5;
-          const newProgress = Math.min(100, p.progress + (2 + Math.random() * 2) * speedMultiplier);
-          const newWpm = 60 + Math.floor(Math.random() * 40);
+        // Random progress increase based on "skill"
+        const baseSpeed = 0.5 + Math.random() * 1.5;
+        const newProgress = Math.min(100, p.progress + baseSpeed);
+        const newWpm = 60 + Math.floor(Math.random() * 40);
 
-          return {
-            ...p,
-            progress: newProgress,
-            wpm: newWpm,
-            finished: newProgress >= 100,
-          };
-        })
-      );
-    }, 500);
+        return {
+          ...p,
+          progress: newProgress,
+          wpm: newWpm,
+          accuracy: 90 + Math.floor(Math.random() * 10),
+        };
+      }));
+    }, 200);
 
     return () => clearInterval(interval);
-  }, [showCountdown]);
+  }, [phase, user?.id]);
 
-  useEffect(() => {
-    const allFinished = players.every((p) => p.finished);
-    if (allFinished && !raceFinished) {
-      const sorted = [...players].sort((a, b) => {
-        if (a.finished && !b.finished) return -1;
-        if (!a.finished && b.finished) return 1;
-        return b.wpm - a.wpm;
-      });
+  // Sort players by progress
+  const sortedPlayers = [...players].sort((a, b) => b.progress - a.progress);
 
-      const ranked = sorted.map((p, index) => ({ ...p, rank: index + 1 }));
-      setFinalResults(ranked);
-      setRaceFinished(true);
-    }
-  }, [players, raceFinished]);
-
-  const getRankIcon = (rank: number) => {
-    if (rank === 1) return <Crown className="w-5 h-5 text-gold" />;
-    if (rank === 2) return <Medal className="w-5 h-5 text-silver" />;
-    if (rank === 3) return <Medal className="w-5 h-5 text-bronze" />;
-    return null;
+  // Handle countdown complete
+  const handleCountdownComplete = () => {
+    setPhase('racing');
+    start();
   };
 
-  const getPointsForRank = (rank: number) => {
-    const points: Record<number, number> = { 1: 50, 2: 30, 3: 20, 4: 10, 5: 5 };
-    return points[rank] ?? 0;
-  };
-
-  if (showCountdown) {
-    return <Countdown seconds={3} onComplete={() => setShowCountdown(false)} />;
-  }
-
-  if (raceFinished) {
-    const userResult = finalResults.find((p) => p.id === '1');
+  // Render finished state
+  if (phase === 'finished') {
+    const rankedPlayers = sortedPlayers.map((p, i) => ({ ...p, position: i + 1 }));
+    const userResult = rankedPlayers.find(p => p.id === user?.id);
 
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full animate-slide-up">
+      <Layout showFooter={false}>
+        <div className="max-w-4xl mx-auto px-4 py-8 animate-fadeIn">
+          {/* Header */}
           <div className="text-center mb-8">
-            <Trophy className="w-16 h-16 text-gold mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-text mb-2">Course terminee !</h1>
-            <p className="text-text-secondary">
-              Voici le classement final
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-[#f59e0b]/20 rounded-full mb-4">
+              <Trophy className="w-10 h-10 text-[#f59e0b]" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Race Complete!</h1>
+            <p className="text-[#a1a1aa] mt-1">
+              You finished in position #{userResult?.position || 1}
             </p>
           </div>
 
-          <div className="space-y-3 mb-8">
-            {finalResults.map((player) => {
-              const isUser = player.id === '1';
-              const points = getPointsForRank(player.rank || 5);
+          {/* Podium */}
+          <div className="flex items-end justify-center gap-4 mb-8">
+            {/* 2nd Place */}
+            {rankedPlayers[1] && (
+              <div className="text-center">
+                <Avatar name={rankedPlayers[1].username} size="lg" className="mx-auto mb-2" />
+                <p className="font-medium text-white text-sm">{rankedPlayers[1].username}</p>
+                <div className="w-24 h-20 bg-[#a1a1aa]/20 rounded-t-lg flex items-center justify-center mt-2">
+                  <Medal className="w-8 h-8 text-[#a1a1aa]" />
+                </div>
+              </div>
+            )}
 
-              return (
+            {/* 1st Place */}
+            {rankedPlayers[0] && (
+              <div className="text-center">
+                <Crown className="w-8 h-8 text-[#f59e0b] mx-auto mb-2" />
+                <Avatar name={rankedPlayers[0].username} size="xl" className="mx-auto mb-2" />
+                <p className="font-medium text-white">{rankedPlayers[0].username}</p>
+                <div className="w-28 h-28 bg-[#f59e0b]/20 rounded-t-lg flex items-center justify-center mt-2">
+                  <Trophy className="w-10 h-10 text-[#f59e0b]" />
+                </div>
+              </div>
+            )}
+
+            {/* 3rd Place */}
+            {rankedPlayers[2] && (
+              <div className="text-center">
+                <Avatar name={rankedPlayers[2].username} size="lg" className="mx-auto mb-2" />
+                <p className="font-medium text-white text-sm">{rankedPlayers[2].username}</p>
+                <div className="w-24 h-16 bg-[#b45309]/20 rounded-t-lg flex items-center justify-center mt-2">
+                  <Medal className="w-6 h-6 text-[#b45309]" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Full Results */}
+          <Card variant="bordered" padding="lg" className="mb-8">
+            <h3 className="font-semibold text-white mb-4">Final Results</h3>
+            <div className="space-y-3">
+              {rankedPlayers.map((player, index) => (
                 <div
                   key={player.id}
                   className={cn(
-                    'flex items-center gap-4 p-4 rounded-lg border transition-colors',
-                    player.rank === 1 && 'bg-gold/10 border-gold/30',
-                    player.rank === 2 && 'bg-silver/10 border-silver/30',
-                    player.rank === 3 && 'bg-bronze/10 border-bronze/30',
-                    player.rank && player.rank > 3 && 'bg-surface-hover border-transparent',
-                    isUser && 'ring-2 ring-primary'
+                    'flex items-center justify-between p-3 rounded-lg',
+                    player.id === user?.id ? 'bg-[#8b5cf6]/10 border border-[#8b5cf6]/30' : 'bg-[#1a1a1a]'
                   )}
                 >
-                  <div className="w-10 text-center">
-                    {getRankIcon(player.rank || 5) || (
-                      <span className="text-lg font-bold text-text-muted">#{player.rank}</span>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      'w-8 h-8 rounded-full flex items-center justify-center font-bold',
+                      index === 0 ? 'bg-[#f59e0b]/20 text-[#f59e0b]' :
+                      index === 1 ? 'bg-[#a1a1aa]/20 text-[#a1a1aa]' :
+                      index === 2 ? 'bg-[#b45309]/20 text-[#b45309]' :
+                      'bg-[#2a2a2a] text-[#71717a]'
+                    )}>
+                      {index + 1}
+                    </span>
+                    <Avatar name={player.username} size="sm" />
+                    <span className="font-medium text-white">
+                      {player.username}
+                      {player.id === user?.id && <Badge variant="primary" size="sm" className="ml-2">You</Badge>}
+                    </span>
                   </div>
-
-                  <Avatar fallback={player.username} size="md" />
-
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={cn('font-semibold', isUser && 'text-primary')}>
-                        {player.username}
-                      </span>
-                      {isUser && <Badge variant="primary" size="sm">Vous</Badge>}
-                    </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="font-bold text-text">{player.wpm} WPM</p>
-                  </div>
-
-                  <div className="text-right min-w-[60px]">
-                    <Badge variant={player.rank === 1 ? 'warning' : 'success'}>
-                      +{points} pts
-                    </Badge>
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="text-white font-medium">{player.wpm} WPM</span>
+                    <span className="text-[#22c55e]">{player.accuracy}%</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </Card>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Link to="/competition" className="flex-1">
-              <Button fullWidth size="lg">
-                Nouvelle course
-              </Button>
-            </Link>
-            <Link to="/dashboard" className="flex-1">
-              <Button variant="outline" fullWidth size="lg">
-                Retour au dashboard
-              </Button>
-            </Link>
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button variant="primary" size="lg" onClick={() => navigate(`/private/lobby/${code}`)}>
+              Race Again
+            </Button>
+            <Button variant="secondary" size="lg" onClick={() => navigate('/private/create')}>
+              Back to Lobby
+            </Button>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="fixed top-0 left-0 right-0 z-40 bg-surface/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <Link
-              to="/competition"
-              className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Quitter</span>
-            </Link>
+    <Layout showFooter={false}>
+      {/* Countdown overlay */}
+      {phase === 'countdown' && <Countdown onComplete={handleCountdownComplete} />}
 
-            <div className="flex items-center gap-2">
-              <Badge variant="error">EN DIRECT</Badge>
-            </div>
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Race Progress */}
+        <Card variant="bordered" padding="md" className="mb-6">
+          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-[#f59e0b]" />
+            Race Progress
+          </h3>
+          <div className="space-y-3">
+            {sortedPlayers.map((player, index) => (
+              <div key={player.id} className="flex items-center gap-3">
+                <span className={cn(
+                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
+                  index === 0 ? 'bg-[#f59e0b]/20 text-[#f59e0b]' : 'bg-[#2a2a2a] text-[#71717a]'
+                )}>
+                  {index + 1}
+                </span>
+                <Avatar name={player.username} size="sm" />
+                <span className={cn(
+                  'w-24 truncate text-sm',
+                  player.id === user?.id ? 'text-[#8b5cf6] font-medium' : 'text-white'
+                )}>
+                  {player.username}
+                </span>
+                <div className="flex-1">
+                  <Progress
+                    value={player.progress}
+                    size="md"
+                    variant={player.id === user?.id ? 'default' : 'success'}
+                  />
+                </div>
+                <span className="text-sm text-white w-16 text-right">{player.wpm} WPM</span>
+              </div>
+            ))}
           </div>
-        </div>
-      </header>
+        </Card>
 
-      <main className="pt-20 pb-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-6 p-4 rounded-lg bg-surface border border-border">
-            <h3 className="text-sm font-medium text-text-secondary mb-3">Classement en direct</h3>
-            <div className="space-y-2">
-              {[...players]
-                .sort((a, b) => b.progress - a.progress)
-                .map((player, index) => {
-                  const isUser = player.id === '1';
-                  return (
-                    <div key={player.id} className="flex items-center gap-3">
-                      <span className={cn(
-                        'w-6 text-sm font-bold',
-                        index === 0 && 'text-gold',
-                        index === 1 && 'text-silver',
-                        index === 2 && 'text-bronze',
-                        index > 2 && 'text-text-muted'
-                      )}>
-                        #{index + 1}
-                      </span>
-                      <Avatar fallback={player.username} size="sm" />
-                      <span className={cn(
-                        'text-sm font-medium flex-shrink-0 w-24 truncate',
-                        isUser && 'text-primary'
-                      )}>
-                        {player.username}
-                      </span>
-                      <div className="flex-1">
-                        <Progress
-                          value={player.progress}
-                          variant={isUser ? 'gradient' : 'default'}
-                          size="sm"
-                        />
-                      </div>
-                      <span className="text-sm font-medium text-text w-16 text-right">
-                        {player.wpm} WPM
-                      </span>
-                    </div>
-                  );
-                })}
+        {/* Stats bar */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <Card variant="bordered" padding="sm" className="text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Gauge className="w-4 h-4 text-[#8b5cf6]" />
+              <span className="text-2xl font-bold text-white">{wpm}</span>
             </div>
-          </div>
+            <p className="text-xs text-[#71717a]">WPM</p>
+          </Card>
 
-          <TypingArea
-            charStates={charStates}
-            currentIndex={currentIndex}
-            onKeyDown={handleKeyDown}
-            disabled={isFinished}
-          />
+          <Card variant="bordered" padding="sm" className="text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Target className="w-4 h-4 text-[#22c55e]" />
+              <span className="text-2xl font-bold text-white">{accuracy}%</span>
+            </div>
+            <p className="text-xs text-[#71717a]">Accuracy</p>
+          </Card>
+
+          <Card variant="bordered" padding="sm" className="text-center">
+            <span className="text-2xl font-bold text-white">{formatTime(elapsedTime)}</span>
+            <p className="text-xs text-[#71717a]">Time</p>
+          </Card>
         </div>
-      </main>
-    </div>
+
+        {/* Typing area */}
+        <TypingArea
+          characters={characters}
+          currentIndex={currentIndex}
+          isActive={phase === 'racing'}
+          className="min-h-[200px]"
+        />
+      </div>
+    </Layout>
   );
 }
+
+export { RacePage };

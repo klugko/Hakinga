@@ -1,193 +1,211 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import {
-  Keyboard,
-  Play,
-  Zap,
-  Target,
-  Clock,
-  Code,
-  BookOpen,
-  Quote,
-  Wrench,
-} from 'lucide-react';
-import type { Difficulty, TextLength, TextCategory } from '@/types';
+import { Keyboard, Gauge, FileText, Zap, Clock, Target, Play } from 'lucide-react';
+import { Layout } from '@/components/layout';
+import { Button, Card, Badge } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
-const difficulties: Array<{ value: Difficulty; label: string; description: string; icon: typeof Zap }> = [
-  { value: 'easy', label: 'Facile', description: 'Mots simples et courants', icon: Target },
-  { value: 'medium', label: 'Moyen', description: 'Vocabulaire varie', icon: Keyboard },
-  { value: 'hard', label: 'Difficile', description: 'Mots complexes et techniques', icon: Zap },
+type Difficulty = 'easy' | 'medium' | 'hard';
+type Length = 'short' | 'medium' | 'long';
+
+interface DifficultyOption {
+  value: Difficulty;
+  label: string;
+  description: string;
+  icon: React.ElementType;
+  color: string;
+}
+
+interface LengthOption {
+  value: Length;
+  label: string;
+  words: string;
+  time: string;
+}
+
+const difficulties: DifficultyOption[] = [
+  {
+    value: 'easy',
+    label: 'Easy',
+    description: 'Common words, simple sentences',
+    icon: Target,
+    color: '#22c55e',
+  },
+  {
+    value: 'medium',
+    label: 'Medium',
+    description: 'Mixed vocabulary, varied punctuation',
+    icon: Gauge,
+    color: '#f59e0b',
+  },
+  {
+    value: 'hard',
+    label: 'Hard',
+    description: 'Complex words, technical terms',
+    icon: Zap,
+    color: '#ef4444',
+  },
 ];
 
-const lengths: Array<{ value: TextLength; label: string; words: string; duration: string }> = [
-  { value: 'short', label: 'Court', words: '50 mots', duration: '~1 min' },
-  { value: 'medium', label: 'Moyen', words: '100 mots', duration: '~2 min' },
-  { value: 'long', label: 'Long', words: '200 mots', duration: '~4 min' },
+const lengths: LengthOption[] = [
+  { value: 'short', label: 'Short', words: '~25 words', time: '~30s' },
+  { value: 'medium', label: 'Medium', words: '~90 words', time: '~1-2min' },
+  { value: 'long', label: 'Long', words: '~180 words', time: '~3-4min' },
 ];
 
-const categories: Array<{ value: TextCategory; label: string; icon: typeof Code }> = [
-  { value: 'prose', label: 'Prose', icon: BookOpen },
-  { value: 'code', label: 'Code', icon: Code },
-  { value: 'technical', label: 'Technique', icon: Wrench },
-  { value: 'quote', label: 'Citations', icon: Quote },
-];
-
-/**
- * Solo practice configuration page
- */
-export function SoloPracticePage() {
-  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
-  const [length, setLength] = useState<TextLength>('medium');
-  const [category, setCategory] = useState<TextCategory | null>(null);
+function SoloPracticePage() {
   const navigate = useNavigate();
+  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>('medium');
+  const [selectedLength, setSelectedLength] = useState<Length>('medium');
 
-  const handleStart = () => {
-    const params = new URLSearchParams({
-      difficulty,
-      length,
-      ...(category && { category }),
-    });
-    navigate(`/solo/session?${params.toString()}`);
+  const handleStartSession = () => {
+    navigate(`/solo/session?difficulty=${selectedDifficulty}&length=${selectedLength}`);
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
-          <Keyboard className="w-5 h-5 text-primary" />
-          <span className="text-primary font-medium">Pratique Solo</span>
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#8b5cf6]/20 rounded-2xl mb-4">
+            <Keyboard className="w-8 h-8 text-[#8b5cf6]" />
+          </div>
+          <h1 className="text-3xl font-bold text-white mb-2">Solo Practice</h1>
+          <p className="text-[#a1a1aa] max-w-md mx-auto">
+            Improve your typing skills at your own pace. Choose your difficulty and text length to get started.
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-text mb-2">Configurez votre session</h1>
-        <p className="text-text-secondary">
-          Choisissez les parametres qui correspondent a vos objectifs
-        </p>
-      </div>
 
-      <div className="space-y-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Difficulte</CardTitle>
-            <CardDescription>Selectionnez le niveau de complexite du texte</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {difficulties.map((d) => {
-                const Icon = d.icon;
-                const isSelected = difficulty === d.value;
-                return (
-                  <button
-                    key={d.value}
-                    onClick={() => setDifficulty(d.value)}
-                    className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-border-hover'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isSelected ? 'bg-primary/20' : 'bg-surface-hover'
-                      }`}>
-                        <Icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-text-muted'}`} />
-                      </div>
-                      <span className={`font-semibold ${isSelected ? 'text-primary' : 'text-text'}`}>
-                        {d.label}
-                      </span>
-                    </div>
-                    <p className="text-sm text-text-secondary">{d.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Difficulty Selection */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Gauge className="w-5 h-5 text-[#8b5cf6]" />
+            Select Difficulty
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {difficulties.map((difficulty) => {
+              const Icon = difficulty.icon;
+              const isSelected = selectedDifficulty === difficulty.value;
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Longueur</CardTitle>
-            <CardDescription>Choisissez la duree approximative de la session</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {lengths.map((l) => {
-                const isSelected = length === l.value;
-                return (
-                  <button
-                    key={l.value}
-                    onClick={() => setLength(l.value)}
-                    className={`p-4 rounded-lg border-2 text-left transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-border-hover'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`font-semibold ${isSelected ? 'text-primary' : 'text-text'}`}>
-                        {l.label}
-                      </span>
-                      <Badge variant={isSelected ? 'primary' : 'default'}>{l.words}</Badge>
+              return (
+                <button
+                  key={difficulty.value}
+                  onClick={() => setSelectedDifficulty(difficulty.value)}
+                  className={cn(
+                    'p-4 rounded-xl border-2 text-left transition-all duration-200',
+                    isSelected
+                      ? 'border-[#8b5cf6] bg-[#8b5cf6]/10'
+                      : 'border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#3a3a3a]'
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${difficulty.color}20` }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: difficulty.color }} />
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
-                      <Clock className="w-4 h-4" />
-                      <span>{l.duration}</span>
+                    <div>
+                      <div className="font-semibold text-white">{difficulty.label}</div>
+                      {isSelected && (
+                        <Badge variant="primary" size="sm">Selected</Badge>
+                      )}
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  </div>
+                  <p className="text-sm text-[#a1a1aa]">{difficulty.description}</p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Categorie (optionnel)</CardTitle>
-            <CardDescription>Filtrez par type de texte</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {categories.map((c) => {
-                const Icon = c.icon;
-                const isSelected = category === c.value;
-                return (
-                  <button
-                    key={c.value}
-                    onClick={() => setCategory(isSelected ? null : c.value)}
-                    className={`p-4 rounded-lg border-2 text-center transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border hover:border-border-hover'
-                    }`}
-                  >
-                    <Icon className={`w-6 h-6 mx-auto mb-2 ${isSelected ? 'text-primary' : 'text-text-muted'}`} />
-                    <span className={`text-sm font-medium ${isSelected ? 'text-primary' : 'text-text'}`}>
-                      {c.label}
+        {/* Length Selection */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-[#8b5cf6]" />
+            Select Length
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {lengths.map((length) => {
+              const isSelected = selectedLength === length.value;
+
+              return (
+                <button
+                  key={length.value}
+                  onClick={() => setSelectedLength(length.value)}
+                  className={cn(
+                    'p-4 rounded-xl border-2 text-left transition-all duration-200',
+                    isSelected
+                      ? 'border-[#8b5cf6] bg-[#8b5cf6]/10'
+                      : 'border-[#2a2a2a] bg-[#1a1a1a] hover:border-[#3a3a3a]'
+                  )}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-white">{length.label}</span>
+                    {isSelected && <Badge variant="primary" size="sm">Selected</Badge>}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-[#a1a1aa]">
+                    <span className="flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      {length.words}
                     </span>
-                  </button>
-                );
-              })}
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {length.time}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Summary & Start */}
+        <Card variant="bordered" padding="lg" className="mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-white mb-1">Your Session</h3>
+              <p className="text-[#a1a1aa]">
+                <span className="capitalize">{selectedDifficulty}</span> difficulty,{' '}
+                <span className="capitalize">{selectedLength}</span> text
+              </p>
             </div>
-          </CardContent>
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={<Play className="w-5 h-5" />}
+              onClick={handleStartSession}
+            >
+              Start Typing
+            </Button>
+          </div>
         </Card>
 
-        <Card className="bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
-          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6">
-            <div>
-              <h3 className="font-semibold text-text">Configuration selectionnee</h3>
-              <div className="flex items-center gap-2 mt-2">
-                <Badge variant="primary">{difficulties.find(d => d.value === difficulty)?.label}</Badge>
-                <Badge variant="default">{lengths.find(l => l.value === length)?.words}</Badge>
-                {category && <Badge variant="info">{categories.find(c => c.value === category)?.label}</Badge>}
-              </div>
-            </div>
-            <Button size="lg" rightIcon={<Play className="w-5 h-5" />} onClick={handleStart}>
-              Commencer la session
-            </Button>
-          </CardContent>
+        {/* Tips */}
+        <Card variant="bordered" padding="md">
+          <h3 className="font-semibold text-white mb-3">Tips for Better Typing</h3>
+          <ul className="space-y-2 text-sm text-[#a1a1aa]">
+            <li className="flex items-start gap-2">
+              <span className="text-[#8b5cf6]">1.</span>
+              Keep your fingers on the home row (ASDF - JKL;)
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#8b5cf6]">2.</span>
+              Focus on accuracy first, speed will come with practice
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#8b5cf6]">3.</span>
+              Don't look at the keyboard - trust your muscle memory
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-[#8b5cf6]">4.</span>
+              Take breaks to avoid fatigue - quality over quantity
+            </li>
+          </ul>
         </Card>
       </div>
-    </div>
+    </Layout>
   );
 }
+
+export { SoloPracticePage };

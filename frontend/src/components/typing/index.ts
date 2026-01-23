@@ -1,3 +1,3 @@
-export { TypingArea, TypingStatsBar } from './TypingArea';
+export { TypingArea } from './TypingArea';
+export { Countdown } from './Countdown';
 export { SessionResults } from './SessionResults';
-export { Countdown, MiniCountdown } from './Countdown';

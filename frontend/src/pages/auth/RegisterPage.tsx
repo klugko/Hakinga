@@ -1,166 +1,224 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Keyboard, Mail, Lock, User, Eye, EyeOff, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
-import { Keyboard, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
-import { ApiException } from '@/lib/api';
+import { Button, Input, Card } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
-const registerSchema = z
-  .object({
-    email: z.string().email('Email invalide'),
-    username: z
-      .string()
-      .min(3, 'Le username doit contenir au moins 3 caracteres')
-      .max(20, 'Le username ne peut pas depasser 20 caracteres')
-      .regex(
-        /^[a-zA-Z0-9_]+$/,
-        'Le username ne peut contenir que des lettres, chiffres et underscores'
-      ),
-    password: z
-      .string()
-      .min(8, 'Le mot de passe doit contenir au moins 8 caracteres')
-      .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
-      .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une minuscule')
-      .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
-    passwordConfirmation: z.string(),
-  })
-  .refine((data) => data.password === data.passwordConfirmation, {
-    message: 'Les mots de passe ne correspondent pas',
-    path: ['passwordConfirmation'],
-  });
-
-type RegisterFormData = z.infer<typeof registerSchema>;
-
-/**
- * Register page component
- */
-export function RegisterPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const { register: registerUser } = useAuth();
-  const { error: showError, success: showSuccess } = useToast();
+function RegisterPage() {
   const navigate = useNavigate();
+  const { register, isLoading } = useAuth();
+  const { error, success } = useToast();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const onSubmit = async (data: RegisterFormData) => {
-    try {
-      await registerUser(data);
-      showSuccess('Compte cree avec succes !');
+  // Password strength checks
+  const passwordChecks = [
+    { label: 'At least 6 characters', valid: formData.password.length >= 6 },
+    { label: 'Contains a number', valid: /\d/.test(formData.password) },
+    { label: 'Contains uppercase', valid: /[A-Z]/.test(formData.password) },
+  ];
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.username) {
+      newErrors.username = 'Username is required';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Username must be at least 3 characters';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    const result = await register(formData);
+
+    if (result) {
+      success('Account created successfully!');
       navigate('/dashboard');
-    } catch (err) {
-      if (err instanceof ApiException) {
-        showError(err.apiError.message);
-      } else {
-        showError('Une erreur est survenue');
-      }
+    } else {
+      error('Failed to create account. Please try again.');
     }
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-8">
-        <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-text mb-2">
-          <Keyboard className="w-8 h-8 text-primary" />
-          <span>Hakinga</span>
-        </Link>
-        <p className="text-text-secondary">Creez votre compte pour commencer</p>
-      </div>
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-xl flex items-center justify-center">
+              <Keyboard className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white">Hakinga</span>
+          </Link>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Inscription</CardTitle>
-          <CardDescription>Remplissez le formulaire pour creer votre compte</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Card variant="bordered" padding="lg">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-white">Create your account</h1>
+            <p className="text-[#a1a1aa] mt-1">Start improving your typing skills today</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              label="Username"
+              name="username"
+              type="text"
+              placeholder="Choose a username"
+              value={formData.username}
+              onChange={handleChange}
+              error={errors.username}
+              leftIcon={<User className="w-4 h-4" />}
+              disabled={isLoading}
+            />
+
             <Input
               label="Email"
+              name="email"
               type="email"
-              placeholder="vous@exemple.com"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
               leftIcon={<Mail className="w-4 h-4" />}
-              error={errors.email?.message}
-              {...register('email')}
+              disabled={isLoading}
             />
 
-            <Input
-              label="Nom d'utilisateur"
-              type="text"
-              placeholder="votre_username"
-              leftIcon={<User className="w-4 h-4" />}
-              error={errors.username?.message}
-              hint="3-20 caracteres, lettres, chiffres et _"
-              {...register('username')}
-            />
+            <div>
+              <Input
+                label="Password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Create a password"
+                value={formData.password}
+                onChange={handleChange}
+                error={errors.password}
+                leftIcon={<Lock className="w-4 h-4" />}
+                rightIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                }
+                disabled={isLoading}
+              />
+
+              {/* Password strength indicators */}
+              {formData.password && (
+                <div className="mt-2 space-y-1">
+                  {passwordChecks.map((check, index) => (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      <Check className={cn('w-3 h-3', check.valid ? 'text-[#22c55e]' : 'text-[#71717a]')} />
+                      <span className={check.valid ? 'text-[#22c55e]' : 'text-[#71717a]'}>
+                        {check.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <Input
-              label="Mot de passe"
+              label="Confirm Password"
+              name="confirmPassword"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Votre mot de passe"
+              placeholder="Confirm your password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
               leftIcon={<Lock className="w-4 h-4" />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="hover:text-text transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              }
-              error={errors.password?.message}
-              hint="Min 8 caracteres, 1 majuscule, 1 minuscule, 1 chiffre"
-              {...register('password')}
+              disabled={isLoading}
             />
 
-            <Input
-              label="Confirmer le mot de passe"
-              type={showConfirmPassword ? 'text' : 'password'}
-              placeholder="Confirmez votre mot de passe"
-              leftIcon={<Lock className="w-4 h-4" />}
-              rightIcon={
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="hover:text-text transition-colors"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              }
-              error={errors.passwordConfirmation?.message}
-              {...register('passwordConfirmation')}
-            />
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="terms"
+                className="w-4 h-4 mt-0.5 rounded border-[#2a2a2a] bg-[#1a1a1a] text-[#8b5cf6] focus:ring-[#8b5cf6]"
+              />
+              <label htmlFor="terms" className="text-sm text-[#a1a1aa]">
+                I agree to the{' '}
+                <a href="#" className="text-[#8b5cf6] hover:text-[#a78bfa]">
+                  Terms of Service
+                </a>{' '}
+                and{' '}
+                <a href="#" className="text-[#8b5cf6] hover:text-[#a78bfa]">
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
 
-            <Button type="submit" fullWidth isLoading={isSubmitting}>
-              Creer mon compte
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+            >
+              Create Account
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-text-secondary">
-              Deja un compte ?{' '}
-              <Link to="/login" className="text-primary hover:text-primary-hover transition-colors">
-                Se connecter
+            <p className="text-[#a1a1aa]">
+              Already have an account?{' '}
+              <Link
+                to="/login"
+                className="text-[#8b5cf6] hover:text-[#a78bfa] font-medium transition-colors"
+              >
+                Sign in
               </Link>
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
+
+export { RegisterPage };

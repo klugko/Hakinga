@@ -1,75 +1,53 @@
-import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
+export interface ProgressProps {
   value: number;
   max?: number;
   size?: 'sm' | 'md' | 'lg';
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'gradient' | 'info';
+  variant?: 'default' | 'success' | 'warning' | 'error';
   showValue?: boolean;
-  label?: string;
+  className?: string;
 }
 
-const sizeStyles = {
-  sm: 'h-1',
-  md: 'h-2',
-  lg: 'h-3',
-};
-
-const variantStyles = {
-  default: 'bg-primary',
-  success: 'bg-success',
-  warning: 'bg-warning',
-  error: 'bg-error',
-  gradient: 'bg-gradient-to-r from-primary to-accent',
-  info: 'bg-accent',
-};
-
-/**
- * Progress bar component
- */
-export function Progress({
-  className,
+function Progress({
   value,
   max = 100,
   size = 'md',
   variant = 'default',
   showValue = false,
-  label,
-  ...props
+  className,
 }: ProgressProps) {
-  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+  const percentage = Math.min(Math.max((value / max) * 100, 0), 100);
+
+  const sizes = {
+    sm: 'h-1',
+    md: 'h-2',
+    lg: 'h-3',
+  };
+
+  const variants = {
+    default: 'bg-[#8b5cf6]',
+    success: 'bg-[#22c55e]',
+    warning: 'bg-[#f59e0b]',
+    error: 'bg-[#ef4444]',
+  };
 
   return (
-    <div className={cn('w-full', className)} {...props}>
-      {(label || showValue) && (
-        <div className="flex items-center justify-between mb-1.5">
-          {label && <span className="text-sm text-text-secondary">{label}</span>}
-          {showValue && (
-            <span className="text-sm font-medium text-text">
-              {Math.round(percentage)}%
-            </span>
-          )}
+    <div className={cn('w-full', className)}>
+      {showValue && (
+        <div className="flex justify-between text-sm text-[#a1a1aa] mb-1">
+          <span>{value}</span>
+          <span>{max}</span>
         </div>
       )}
-      <div
-        className={cn(
-          'w-full rounded-full bg-surface-hover overflow-hidden',
-          sizeStyles[size]
-        )}
-        role="progressbar"
-        aria-valuenow={value}
-        aria-valuemin={0}
-        aria-valuemax={max}
-      >
+      <div className={cn('w-full bg-[#252525] rounded-full overflow-hidden', sizes[size])}>
         <div
-          className={cn(
-            'h-full rounded-full transition-all duration-300 ease-out',
-            variantStyles[variant]
-          )}
+          className={cn('h-full rounded-full transition-all duration-300', variants[variant])}
           style={{ width: `${percentage}%` }}
         />
       </div>
     </div>
   );
 }
+
+export { Progress };

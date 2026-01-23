@@ -1,124 +1,145 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useToast } from '@/contexts/ToastContext';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Keyboard, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
-import { authApi, ApiException } from '@/lib/api';
+import { Button, Input, Card } from '@/components/ui';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Email invalide'),
-});
-
-type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
-
-/**
- * Forgot password page component
- */
-export function ForgotPasswordPage() {
+function ForgotPasswordPage() {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const { error: showError } = useToast();
+  const [error, setError] = useState('');
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<ForgotPasswordFormData>({
-    resolver: zodResolver(forgotPasswordSchema),
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const onSubmit = async (data: ForgotPasswordFormData) => {
-    try {
-      await authApi.forgotPassword(data.email);
-      setIsSubmitted(true);
-    } catch (err) {
-      if (err instanceof ApiException) {
-        showError(err.apiError.message);
-      } else {
-        showError('Une erreur est survenue');
-      }
+    if (!email) {
+      setError('Email is required');
+      return;
     }
+
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError('Please enter a valid email');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setIsLoading(false);
+    setIsSubmitted(true);
   };
 
   if (isSubmitted) {
     return (
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-text mb-2">
-            <Keyboard className="w-8 h-8 text-primary" />
-            <span>Hakinga</span>
-          </Link>
-        </div>
-
-        <Card>
-          <CardContent className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-success/20 flex items-center justify-center">
-              <CheckCircle className="w-8 h-8 text-success" />
-            </div>
-            <h2 className="text-xl font-semibold text-text mb-2">Email envoye</h2>
-            <p className="text-text-secondary mb-6">
-              Si un compte existe avec cette adresse email, vous recevrez un lien de
-              reinitialisation dans quelques minutes.
-            </p>
-            <Link to="/login">
-              <Button variant="outline" leftIcon={<ArrowLeft className="w-4 h-4" />}>
-                Retour a la connexion
-              </Button>
+      <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <Link to="/" className="inline-flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-xl flex items-center justify-center">
+                <Keyboard className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold text-white">Hakinga</span>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+
+          <Card variant="bordered" padding="lg">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-[#22c55e]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-[#22c55e]" />
+              </div>
+              <h1 className="text-2xl font-bold text-white mb-2">Check your email</h1>
+              <p className="text-[#a1a1aa] mb-6">
+                We've sent a password reset link to <span className="text-white">{email}</span>
+              </p>
+              <p className="text-sm text-[#71717a] mb-6">
+                Didn't receive the email? Check your spam folder or try again.
+              </p>
+
+              <div className="space-y-3">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => setIsSubmitted(false)}
+                >
+                  Try another email
+                </Button>
+                <Link to="/login">
+                  <Button variant="ghost" className="w-full">
+                    Back to login
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-8">
-        <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-text mb-2">
-          <Keyboard className="w-8 h-8 text-primary" />
-          <span>Hakinga</span>
-        </Link>
-        <p className="text-text-secondary">Reinitialiser votre mot de passe</p>
-      </div>
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-xl flex items-center justify-center">
+              <Keyboard className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white">Hakinga</span>
+          </Link>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mot de passe oublie</CardTitle>
-          <CardDescription>
-            Entrez votre adresse email pour recevoir un lien de reinitialisation
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Card variant="bordered" padding="lg">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-white">Forgot password?</h1>
+            <p className="text-[#a1a1aa] mt-1">
+              No worries, we'll send you reset instructions.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email"
               type="email"
-              placeholder="vous@exemple.com"
+              placeholder="Enter your email address"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError('');
+              }}
+              error={error}
               leftIcon={<Mail className="w-4 h-4" />}
-              error={errors.email?.message}
-              {...register('email')}
+              disabled={isLoading}
             />
 
-            <Button type="submit" fullWidth isLoading={isSubmitting}>
-              Envoyer le lien
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+            >
+              Reset password
             </Button>
           </form>
 
           <div className="mt-6 text-center">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text transition-colors"
+              className="inline-flex items-center gap-2 text-[#a1a1aa] hover:text-white transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Retour a la connexion
+              Back to login
             </Link>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 }
+
+export { ForgotPasswordPage };

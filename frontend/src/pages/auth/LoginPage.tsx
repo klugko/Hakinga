@@ -1,124 +1,156 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { Keyboard, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
-import { Keyboard, Mail, Lock, Eye, EyeOff } from 'lucide-react';
-import { ApiException } from '@/lib/api';
+import { Button, Input, Card } from '@/components/ui';
 
-const loginSchema = z.object({
-  email: z.string().email('Email invalide'),
-  password: z.string().min(1, 'Mot de passe requis'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
-
-/**
- * Login page component
- */
-export function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
-  const { error: showError } = useToast();
+function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { login, isLoading } = useAuth();
+  const { error, success } = useToast();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  });
+  const validate = () => {
+    const newErrors: { email?: string; password?: string } = {};
 
-  const onSubmit = async (data: LoginFormData) => {
-    try {
-      await login(data);
+    if (!email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Please enter a valid email';
+    }
+
+    if (!password) {
+      newErrors.password = 'Password is required';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validate()) return;
+
+    const result = await login({ email, password });
+
+    if (result) {
+      success('Welcome back!');
       navigate(from, { replace: true });
-    } catch (err) {
-      if (err instanceof ApiException) {
-        showError(err.apiError.message);
-      } else {
-        showError('Une erreur est survenue');
-      }
+    } else {
+      error('Invalid email or password');
     }
   };
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-8">
-        <Link to="/" className="inline-flex items-center gap-2 text-2xl font-bold text-text mb-2">
-          <Keyboard className="w-8 h-8 text-primary" />
-          <span>Hakinga</span>
-        </Link>
-        <p className="text-text-secondary">Connectez-vous pour continuer</p>
-      </div>
+    <div className="min-h-screen bg-[#0f0f0f] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded-xl flex items-center justify-center">
+              <Keyboard className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white">Hakinga</span>
+          </Link>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Connexion</CardTitle>
-          <CardDescription>Entrez vos identifiants pour acceder a votre compte</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Card variant="bordered" padding="lg">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+            <p className="text-[#a1a1aa] mt-1">Sign in to continue your typing journey</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email"
               type="email"
-              placeholder="vous@exemple.com"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={errors.email}
               leftIcon={<Mail className="w-4 h-4" />}
-              error={errors.email?.message}
-              {...register('email')}
+              disabled={isLoading}
             />
 
             <Input
-              label="Mot de passe"
+              label="Password"
               type={showPassword ? 'text' : 'password'}
-              placeholder="Votre mot de passe"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errors.password}
               leftIcon={<Lock className="w-4 h-4" />}
               rightIcon={
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="hover:text-text transition-colors"
+                  className="hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               }
-              error={errors.password?.message}
-              {...register('password')}
+              disabled={isLoading}
             />
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-[#2a2a2a] bg-[#1a1a1a] text-[#8b5cf6] focus:ring-[#8b5cf6]"
+                />
+                <span className="text-sm text-[#a1a1aa]">Remember me</span>
+              </label>
+
               <Link
                 to="/forgot-password"
-                className="text-sm text-primary hover:text-primary-hover transition-colors"
+                className="text-sm text-[#8b5cf6] hover:text-[#a78bfa] transition-colors"
               >
-                Mot de passe oublie ?
+                Forgot password?
               </Link>
             </div>
 
-            <Button type="submit" fullWidth isLoading={isSubmitting}>
-              Se connecter
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              size="lg"
+              isLoading={isLoading}
+            >
+              Sign in
             </Button>
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-sm text-text-secondary">
-              Pas encore de compte ?{' '}
-              <Link to="/register" className="text-primary hover:text-primary-hover transition-colors">
-                S'inscrire
+            <p className="text-[#a1a1aa]">
+              Don't have an account?{' '}
+              <Link
+                to="/register"
+                className="text-[#8b5cf6] hover:text-[#a78bfa] font-medium transition-colors"
+              >
+                Sign up
               </Link>
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+
+        {/* Demo credentials hint */}
+        <p className="text-center text-sm text-[#71717a] mt-4">
+          Use any email and a password with 6+ characters to login (demo mode)
+        </p>
+      </div>
     </div>
   );
 }
+
+export { LoginPage };
