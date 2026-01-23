@@ -1,11 +1,14 @@
-import { useState, useMemo } from 'react';
-import { History, Filter, ArrowUpDown, Calendar, Gauge, Target, Clock } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { History, Filter, ArrowUpDown, Calendar, Gauge, Target, Clock, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Badge, Button, Select } from '@/components/ui';
-import { mockSessions, formatDate, formatTime, formatRelativeTime } from '@/lib/utils';
+import { sessionService } from '@/services';
+import { formatDate, formatTime, formatRelativeTime } from '@/lib/utils';
 import type { HistoryFilter, TypingSession } from '@/types';
 
 function HistoryPage() {
+  const [sessions, setSessions] = useState<TypingSession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<HistoryFilter>({
     mode: 'all',
     dateRange: 'all',
@@ -13,14 +16,28 @@ function HistoryPage() {
     sortOrder: 'desc',
   });
 
-  // Filter and sort sessions
-  const filteredSessions = useMemo(() => {
-    let sessions = [...mockSessions];
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setLoading(true);
+        const result = await sessionService.getSessionHistory({
+          limit: 50,
+          mode: filter.mode === 'all' ? undefined : filter.mode,
+        });
+        setSessions(result.sessions);
+      } catch (error) {
+        console.error('Failed to fetch sessions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Filter by mode
-    if (filter.mode !== 'all') {
-      sessions = sessions.filter(s => s.mode === filter.mode);
-    }
+    fetchSessions();
+  }, [filter.mode]);
+
+  // Filter and sort sessions locally
+  const filteredSessions = useMemo(() => {
+    let result = [...sessions];
 
     // Filter by date range
     if (filter.dateRange !== 'all') {
@@ -32,11 +49,11 @@ function HistoryPage() {
       };
       const days = ranges[filter.dateRange];
       const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-      sessions = sessions.filter(s => new Date(s.completedAt) >= cutoff);
+      result = result.filter(s => new Date(s.completedAt) >= cutoff);
     }
 
     // Sort
-    sessions.sort((a, b) => {
+    result.sort((a, b) => {
       let comparison = 0;
       switch (filter.sortBy) {
         case 'date':
@@ -52,8 +69,8 @@ function HistoryPage() {
       return filter.sortOrder === 'desc' ? comparison : -comparison;
     });
 
-    return sessions;
-  }, [filter]);
+    return result;
+  }, [sessions, filter.dateRange, filter.sortBy, filter.sortOrder]);
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
@@ -203,7 +220,11 @@ function HistoryPage() {
 
         {/* Sessions List */}
         <Card variant="bordered" padding="none">
-          {filteredSessions.length === 0 ? (
+          {loading ? (
+            <div className="p-8 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
+            </div>
+          ) : filteredSessions.length === 0 ? (
             <div className="p-8 text-center">
               <History className="w-12 h-12 text-[#71717a] mx-auto mb-4" />
               <p className="text-[#a1a1aa]">No sessions found matching your filters</p>

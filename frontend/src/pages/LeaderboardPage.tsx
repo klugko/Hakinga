@@ -1,38 +1,41 @@
-import { useState } from 'react';
-import { Trophy, Medal, Crown, Gauge, Target, Calendar, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Trophy, Medal, Crown, Gauge, Target, User, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Tabs, TabsList, TabsTrigger, TabsContent, Avatar, Badge } from '@/components/ui';
-import { mockLeaderboard, cn } from '@/lib/utils';
+import { leaderboardService } from '@/services';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import type { LeaderboardEntry } from '@/types';
 
 function LeaderboardPage() {
   const { user } = useAuth();
-  const [timeRange, setTimeRange] = useState('all');
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('all');
 
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="w-5 h-5 text-[#f59e0b]" />;
-      case 2:
-        return <Medal className="w-5 h-5 text-[#a1a1aa]" />;
-      case 3:
-        return <Medal className="w-5 h-5 text-[#b45309]" />;
-      default:
-        return <span className="text-[#71717a] font-medium">#{rank}</span>;
-    }
-  };
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        const [leaderboardData, rankData] = await Promise.all([
+          leaderboardService.getLeaderboard({ period, limit: 50 }),
+          leaderboardService.getMyRank(period),
+        ]);
+        setEntries(leaderboardData.entries);
+        setMyRank(rankData);
+      } catch (error) {
+        console.error('Failed to fetch leaderboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const getRankBg = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return 'bg-gradient-to-r from-[#f59e0b]/20 to-transparent border-l-4 border-l-[#f59e0b]';
-      case 2:
-        return 'bg-gradient-to-r from-[#a1a1aa]/10 to-transparent border-l-4 border-l-[#a1a1aa]';
-      case 3:
-        return 'bg-gradient-to-r from-[#b45309]/20 to-transparent border-l-4 border-l-[#b45309]';
-      default:
-        return '';
-    }
+    fetchLeaderboard();
+  }, [period]);
+
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriod(newPeriod);
   };
 
   return (
@@ -48,7 +51,7 @@ function LeaderboardPage() {
         </div>
 
         {/* Time Range Tabs */}
-        <Tabs defaultValue="all" onChange={setTimeRange} className="mb-6">
+        <Tabs defaultValue="all" onChange={handlePeriodChange} className="mb-6">
           <TabsList className="grid grid-cols-4">
             <TabsTrigger value="all">All Time</TabsTrigger>
             <TabsTrigger value="month">This Month</TabsTrigger>
@@ -57,21 +60,21 @@ function LeaderboardPage() {
           </TabsList>
 
           <TabsContent value="all">
-            <LeaderboardList entries={mockLeaderboard} currentUserId={user?.id} />
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
           </TabsContent>
           <TabsContent value="month">
-            <LeaderboardList entries={mockLeaderboard.slice(0, 8)} currentUserId={user?.id} />
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
           </TabsContent>
           <TabsContent value="week">
-            <LeaderboardList entries={mockLeaderboard.slice(0, 6)} currentUserId={user?.id} />
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
           </TabsContent>
           <TabsContent value="today">
-            <LeaderboardList entries={mockLeaderboard.slice(0, 4)} currentUserId={user?.id} />
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
           </TabsContent>
         </Tabs>
 
         {/* Your Rank Card */}
-        {user && (
+        {user && myRank && (
           <Card variant="bordered" padding="lg" className="mt-8">
             <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <User className="w-5 h-5 text-[#8b5cf6]" />
@@ -80,16 +83,16 @@ function LeaderboardPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center font-bold text-[#8b5cf6]">
-                  #10
+                  #{myRank.rank}
                 </div>
                 <div>
                   <p className="font-semibold text-white">{user.username}</p>
-                  <p className="text-sm text-[#a1a1aa]">{user.stats.totalSessions} sessions</p>
+                  <p className="text-sm text-[#a1a1aa]">{myRank.sessionsPlayed} sessions</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-white">{user.stats.bestWpm} WPM</p>
-                <p className="text-sm text-[#a1a1aa]">{user.stats.avgAccuracy}% accuracy</p>
+                <p className="text-2xl font-bold text-white">{myRank.wpm} WPM</p>
+                <p className="text-sm text-[#a1a1aa]">{myRank.accuracy}% accuracy</p>
               </div>
             </div>
           </Card>
@@ -100,11 +103,12 @@ function LeaderboardPage() {
 }
 
 interface LeaderboardListProps {
-  entries: typeof mockLeaderboard;
+  entries: LeaderboardEntry[];
   currentUserId?: string;
+  loading: boolean;
 }
 
-function LeaderboardList({ entries, currentUserId }: LeaderboardListProps) {
+function LeaderboardList({ entries, currentUserId, loading }: LeaderboardListProps) {
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1:
@@ -130,6 +134,26 @@ function LeaderboardList({ entries, currentUserId }: LeaderboardListProps) {
         return '';
     }
   };
+
+  if (loading) {
+    return (
+      <Card variant="bordered" padding="lg">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <Card variant="bordered" padding="lg">
+        <div className="text-center py-8 text-[#71717a]">
+          No entries yet. Be the first to compete!
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card variant="bordered" padding="none">

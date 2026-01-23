@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { User, AuthState, LoginCredentials, RegisterData } from '@/types';
-import { mockUser, sleep } from '@/lib/utils';
+import { authService, userService, apiClient } from '@/services';
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>;
   register: (data: RegisterData) => Promise<boolean>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -33,19 +34,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Check for stored auth on mount
   useEffect(() => {
     const checkAuth = async () => {
+      const token = localStorage.getItem('hakinga_token');
       const storedUser = localStorage.getItem('hakinga_user');
-      if (storedUser) {
+
+      if (token) {
         try {
-          const user = JSON.parse(storedUser);
+          // Validate token by fetching current user
+          const user = await userService.getCurrentUser();
+          localStorage.setItem('hakinga_user', JSON.stringify(user));
           setState({
             user,
             isAuthenticated: true,
             isLoading: false,
           });
         } catch {
+          // Token is invalid, clear storage
+          localStorage.removeItem('hakinga_token');
           localStorage.removeItem('hakinga_user');
-          setState(prev => ({ ...prev, isLoading: false }));
+          apiClient.setAccessToken(null);
+          setState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
         }
+      } else if (storedUser) {
+        // Have stored user but no token - clear it
+        localStorage.removeItem('hakinga_user');
+        setState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       } else {
         setState(prev => ({ ...prev, isLoading: false }));
       }
@@ -56,17 +76,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
     setState(prev => ({ ...prev, isLoading: true }));
 
-    // Simulate API call
-    await sleep(800);
-
-    // Mock validation - accept any email with password length >= 6
-    if (credentials.email && credentials.password.length >= 6) {
-      // Create user from mock data or generate from email
-      const user: User = {
-        ...mockUser,
+    try {
+      const { user } = await authService.login({
         email: credentials.email,
-        username: credentials.email.split('@')[0],
-      };
+        password: credentials.password,
+      });
 
       localStorage.setItem('hakinga_user', JSON.stringify(user));
 
@@ -76,34 +90,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading: false,
       });
       return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      return false;
     }
-
-    setState(prev => ({ ...prev, isLoading: false }));
-    return false;
   }, []);
 
   const register = useCallback(async (data: RegisterData): Promise<boolean> => {
     setState(prev => ({ ...prev, isLoading: true }));
 
-    // Simulate API call
-    await sleep(1000);
+    try {
+      if (data.password !== data.confirmPassword) {
+        setState(prev => ({ ...prev, isLoading: false }));
+        return false;
+      }
 
-    // Mock validation
-    if (data.email && data.username && data.password.length >= 6 && data.password === data.confirmPassword) {
-      const user: User = {
-        id: Date.now().toString(),
+      const { user } = await authService.register({
         username: data.username,
         email: data.email,
-        createdAt: new Date().toISOString(),
-        stats: {
-          avgWpm: 0,
-          avgAccuracy: 0,
-          bestWpm: 0,
-          totalSessions: 0,
-          totalTimeTyped: 0,
-          totalCharactersTyped: 0,
-        },
-      };
+        password: data.password,
+      });
 
       localStorage.setItem('hakinga_user', JSON.stringify(user));
 
@@ -113,19 +120,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading: false,
       });
       return true;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
+      return false;
     }
-
-    setState(prev => ({ ...prev, isLoading: false }));
-    return false;
   }, []);
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('hakinga_user');
-    setState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Ignore logout errors
+    } finally {
+      localStorage.removeItem('hakinga_user');
+      setState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+    }
   }, []);
 
   const updateUser = useCallback((data: Partial<User>) => {
@@ -137,8 +151,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     });
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    if (!state.isAuthenticated) return;
+
+    try {
+      const user = await userService.getCurrentUser();
+      localStorage.setItem('hakinga_user', JSON.stringify(user));
+      setState(prev => ({ ...prev, user }));
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+    }
+  }, [state.isAuthenticated]);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

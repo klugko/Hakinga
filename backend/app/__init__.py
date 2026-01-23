@@ -1,0 +1,1 @@
+"""Hakinga Backend Application."""
