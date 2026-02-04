@@ -74,11 +74,18 @@ function RegisterPage() {
 
     const result = await register(formData);
 
-    if (result) {
+    if (result.success) {
       success('Account created successfully!');
       navigate('/dashboard');
     } else {
-      error('Failed to create account. Please try again.');
+      const errorMessage = result.error || 'Failed to create account';
+      error(errorMessage);
+
+      if (errorMessage.toLowerCase().includes('email')) {
+        setErrors(prev => ({ ...prev, email: errorMessage }));
+      } else if (errorMessage.toLowerCase().includes('username')) {
+        setErrors(prev => ({ ...prev, username: errorMessage }));
+      }
     }
   };
 

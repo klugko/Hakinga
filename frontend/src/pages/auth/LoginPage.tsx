@@ -44,11 +44,18 @@ function LoginPage() {
 
     const result = await login({ email, password });
 
-    if (result) {
+    if (result.success) {
       success('Welcome back!');
       navigate(from, { replace: true });
     } else {
-      error('Invalid email or password');
+      const errorMessage = result.error || 'Invalid email or password';
+      error(errorMessage);
+
+      if (errorMessage.toLowerCase().includes('password')) {
+        setErrors(prev => ({ ...prev, password: errorMessage }));
+      } else if (errorMessage.toLowerCase().includes('email')) {
+        setErrors(prev => ({ ...prev, email: errorMessage }));
+      }
     }
   };
 

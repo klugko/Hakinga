@@ -2,9 +2,14 @@ import { createContext, useContext, useState, useCallback, useEffect, type React
 import type { User, AuthState, LoginCredentials, RegisterData } from '@/types';
 import { authService, userService, apiClient } from '@/services';
 
+interface AuthResult {
+  success: boolean;
+  error?: string;
+}
+
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (data: RegisterData) => Promise<boolean>;
+  login: (credentials: LoginCredentials) => Promise<AuthResult>;
+  register: (data: RegisterData) => Promise<AuthResult>;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
   refreshUser: () => Promise<void>;
@@ -73,7 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     checkAuth();
   }, []);
 
-  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
+  const login = useCallback(async (credentials: LoginCredentials): Promise<AuthResult> => {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
@@ -89,21 +94,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
       });
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Login failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
-      return false;
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      return { success: false, error: errorMessage };
     }
   }, []);
 
-  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
+  const register = useCallback(async (data: RegisterData): Promise<AuthResult> => {
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
       if (data.password !== data.confirmPassword) {
         setState(prev => ({ ...prev, isLoading: false }));
-        return false;
+        return { success: false, error: 'Passwords do not match' };
       }
 
       const { user } = await authService.register({
@@ -119,11 +125,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isAuthenticated: true,
         isLoading: false,
       });
-      return true;
+      return { success: true };
     } catch (error) {
       console.error('Registration failed:', error);
       setState(prev => ({ ...prev, isLoading: false }));
-      return false;
+      const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+      return { success: false, error: errorMessage };
     }
   }, []);
 
