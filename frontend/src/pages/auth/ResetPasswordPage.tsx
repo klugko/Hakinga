@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Keyboard, Lock, Eye, EyeOff, Check, CheckCircle } from 'lucide-react';
 import { Button, Input, Card } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
 import { cn } from '@/lib/utils';
 
 function ResetPasswordPage() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { success } = useToast();
   const token = searchParams.get('token');

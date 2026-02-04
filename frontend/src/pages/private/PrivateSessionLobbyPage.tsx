@@ -5,7 +5,7 @@ import { Layout } from '@/components/layout';
 import { Button, Card, Avatar, Badge } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { mockPlayers, sleep, cn } from '@/lib/utils';
+import { mockPlayers, cn } from '@/lib/utils';
 import type { Player } from '@/types';
 
 function PrivateSessionLobbyPage() {

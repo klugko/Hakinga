@@ -2,7 +2,7 @@
  * Authentication Service
  */
 import { apiClient } from './api';
-import type { User, UserStats } from '@/types';
+import type { User } from '@/types';
 
 export interface AuthResponse {
   user: UserResponse;

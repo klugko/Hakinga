@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Trophy, Users, Clock, Zap, ArrowRight } from 'lucide-react';
+import { Trophy, Users, Zap, ArrowRight } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Button, Badge } from '@/components/ui';
 

@@ -2,7 +2,7 @@
  * User Service
  */
 import { apiClient } from './api';
-import type { User, DashboardStats, TypingSession, WpmDataPoint } from '@/types';
+import type { User, DashboardStats, TypingSession } from '@/types';
 
 interface UserResponse {
   id: string;

@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Keyboard, Target, Gauge, Timer, Zap, ArrowRight } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Badge, Progress } from '@/components/ui';
-import { cn } from '@/lib/utils';
 
 interface TrainingMode {
   id: string;

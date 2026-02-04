@@ -39,15 +39,15 @@ function HistoryPage() {
   const filteredSessions = useMemo(() => {
     let result = [...sessions];
 
-    // Filter by date range
     if (filter.dateRange !== 'all') {
       const now = new Date();
-      const ranges: Record<string, number> = {
+      const ranges = {
         today: 1,
         week: 7,
         month: 30,
-      };
-      const days = ranges[filter.dateRange];
+      } as const;
+      const dateRange = filter.dateRange as keyof typeof ranges;
+      const days = ranges[dateRange];
       const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
       result = result.filter(s => new Date(s.completedAt) >= cutoff);
     }

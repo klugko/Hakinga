@@ -40,8 +40,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               error
                 ? 'border-[#ef4444] focus:ring-[#ef4444]'
                 : 'border-[#2a2a2a] focus:border-[#8b5cf6] focus:ring-[#8b5cf6]',
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
+              leftIcon ? 'pl-10' : '',
+              rightIcon ? 'pr-10' : '',
               className
             )}
             {...props}

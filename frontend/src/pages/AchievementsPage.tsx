@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Trophy, Lock, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { Card, Badge, Progress } from '@/components/ui';
+import { Card, Progress } from '@/components/ui';
 import { achievementService } from '@/services';
 import { formatDate, cn } from '@/lib/utils';
 import type { Achievement } from '@/types';

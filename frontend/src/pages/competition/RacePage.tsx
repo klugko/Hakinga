@@ -30,11 +30,8 @@ function RacePage() {
     },
     ...mockPlayers.slice(1, 4).map(p => ({ ...p, progress: 0, wpm: 0, accuracy: 100 })),
   ]);
-  const [sessionResult, setSessionResult] = useState<Partial<TypingSession> | null>(null);
-
   // Handle session completion
   const handleComplete = useCallback((result: Partial<TypingSession>) => {
-    setSessionResult(result);
     setPlayers(prev => prev.map(p =>
       p.id === user?.id
         ? { ...p, progress: 100, wpm: result.wpm || 0, accuracy: result.accuracy || 0, position: 1 }

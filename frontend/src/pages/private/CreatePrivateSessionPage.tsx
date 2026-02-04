@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Copy, Check, FileText, Gauge, Play, Link as LinkIcon } from 'lucide-react';
+import { Users, Copy, Check, Play, Link as LinkIcon } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { Button, Card, Input, Badge, Select } from '@/components/ui';
+import { Button, Card, Input, Select } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
-import { generateSessionCode, cn } from '@/lib/utils';
+import { generateSessionCode } from '@/lib/utils';
 
 function CreatePrivateSessionPage() {
   const navigate = useNavigate();

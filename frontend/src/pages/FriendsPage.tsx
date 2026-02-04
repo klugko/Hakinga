@@ -3,7 +3,6 @@ import { Users, UserPlus, Search, Mail, Gamepad2, Gauge, Loader2, Check, X } fro
 import { Layout } from '@/components/layout';
 import { Card, Button, Input, Avatar, Badge, Tabs, TabsList, TabsTrigger, TabsContent, Modal } from '@/components/ui';
 import { friendService } from '@/services';
-import { cn } from '@/lib/utils';
 import { useToast } from '@/contexts/ToastContext';
 import type { Friend, FriendRequest } from '@/types';
 

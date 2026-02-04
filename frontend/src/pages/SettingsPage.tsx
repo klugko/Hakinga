@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Settings, User, Bell, Palette, Lock, LogOut, ChevronRight, Moon, Volume2 } from 'lucide-react';
+import { Settings, User, Bell, Lock, LogOut, ChevronRight, Moon, Volume2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Button, Input, Modal } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Avatar, Button } from '@/components/ui';
+import { Avatar } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 const navItems = [

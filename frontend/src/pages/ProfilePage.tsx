@@ -4,7 +4,7 @@ import { Layout } from '@/components/layout';
 import { Card, Button, Avatar, Badge, Input, Modal, Progress } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { mockAchievements, formatDate, formatTime } from '@/lib/utils';
+import { mockAchievements, formatDate } from '@/lib/utils';
 
 function ProfilePage() {
   const { user, updateUser } = useAuth();

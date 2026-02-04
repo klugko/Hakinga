@@ -14,8 +14,6 @@ interface QuoteCache {
   initialized: boolean;
 }
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-
 let quoteCache: QuoteCache = {
   quotes: [],
   lastFetch: 0,
