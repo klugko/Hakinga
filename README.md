@@ -2,16 +2,16 @@
 
 # Hakinga
 
-### Modern Typing Training Platform
+### Intelligent Typing Training Platform with Machine Learning
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 
-A modern, intelligent typing training platform that combines competitive gameplay with personalized learning.
+A smart typing training platform that uses **Machine Learning** to analyze your typing patterns, identify weaknesses, and provide personalized training recommendations.
 
-[Features](#features) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started) · [Architecture](#architecture)
+[Features](#features) · [ML Features](#-machine-learning--personalization) · [Tech Stack](#tech-stack) · [Getting Started](#getting-started)
 
 </div>
 
@@ -66,20 +66,11 @@ Hakinga is a full-stack web application designed to help users master touch typi
 <tr>
 <td width="50%">
 
-### Authentication
-- User registration with email verification
-- Secure login with JWT tokens
-- Password reset via email
-- Session management with refresh tokens
-
 ### Typing Practice
 - Multiple text categories (quotes, code, paragraphs)
 - Real-time WPM and accuracy calculation
 - Visual feedback for errors
-- Customizable session duration
-
-</td>
-<td width="50%">
+- Adaptive difficulty adjustment
 
 ### Competition
 - Public racing lobby
@@ -87,15 +78,92 @@ Hakinga is a full-stack web application designed to help users master touch typi
 - Live progress tracking
 - Post-race statistics
 
-### Social & Analytics
+</td>
+<td width="50%">
+
+### Social Features
 - Friend system with requests
 - Private session invitations
 - Global and friend leaderboards
-- WPM progression charts
+
+### Authentication
+- Secure JWT authentication
+- Email verification
+- Password reset via email
+- Session management with refresh tokens
 
 </td>
 </tr>
 </table>
+
+---
+
+## Machine Learning & Personalization
+
+> **What makes Hakinga different?** Unlike traditional typing trainers, Hakinga uses Machine Learning to understand your unique typing patterns and create a personalized learning path.
+
+<table>
+<tr>
+<td width="50%">
+
+### Intelligent Analysis
+
+**Keystroke Data Collection**
+- Records every keystroke with precise timing
+- Tracks error patterns and correction behavior
+- Analyzes typing rhythm and consistency
+
+**Weakness Detection**
+- Identifies problematic characters (high error rate)
+- Detects difficult bigrams/trigrams (e.g., "qu", "th", "tion")
+- Maps weak zones on keyboard layout
+
+**Typing Profile**
+- Interactive keyboard heatmap
+- Error distribution by character type
+- Inter-keystroke timing analysis
+- Multi-dimensional skill score (not just WPM)
+
+</td>
+<td width="50%">
+
+### Adaptive Learning
+
+**Dynamic Difficulty**
+- Auto-adjusts text difficulty based on performance
+- Increases challenge when you improve
+- Reduces difficulty if accuracy drops
+
+**Targeted Training**
+- Generates texts rich in your weak characters
+- Custom drill exercises for specific weaknesses
+- Personalized training plans
+
+**Predictions & Insights**
+- WPM progression prediction (30-day forecast)
+- Plateau detection with actionable suggestions
+- Daily personalized insights
+- Performance pattern analysis (best time of day, etc.)
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+
+### Skill Level System
+
+| Level | Score | Description |
+|:-----:|:-----:|:------------|
+| Beginner | 0-20 | Just starting your typing journey |
+| Novice | 21-40 | Building fundamental skills |
+| Intermediate | 41-60 | Developing speed and accuracy |
+| Advanced | 61-80 | Mastering complex patterns |
+| Expert | 81-100 | Peak performance achieved |
+
+*Score calculated from: WPM (30%) + Accuracy (30%) + Consistency (20%) + Progression (10%) + Difficulty handling (10%)*
+
+</div>
 
 ---
 
