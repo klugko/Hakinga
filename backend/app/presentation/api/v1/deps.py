@@ -26,6 +26,7 @@ from app.infrastructure.repositories.achievement_repository_impl import Postgres
 from app.infrastructure.repositories.friend_repository_impl import PostgresFriendRepository
 from app.infrastructure.repositories.leaderboard_repository_impl import PostgresLeaderboardRepository
 from app.infrastructure.repositories.settings_repository_impl import PostgresSettingsRepository
+from app.infrastructure.email.email_service import EmailService
 
 # Type alias for database session dependency
 DbSession = Annotated[AsyncSession, Depends(get_db)]
@@ -70,12 +71,18 @@ def get_settings_repository(db: DbSession) -> PostgresSettingsRepository:
     return PostgresSettingsRepository(db)
 
 
+def get_email_service() -> EmailService:
+    """Get email service instance."""
+    return EmailService()
+
+
 # Service dependencies
 def get_auth_service(
     user_repo: Annotated[PostgresUserRepository, Depends(get_user_repository)],
+    email_service: Annotated[EmailService, Depends(get_email_service)],
 ) -> AuthService:
     """Get auth service instance."""
-    return AuthService(user_repo)
+    return AuthService(user_repo, email_service)
 
 
 def get_user_service(
