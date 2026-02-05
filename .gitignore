@@ -13,6 +13,7 @@ instructions.md
 *.log
 .idea
 .vscode
+instructions.txt
 *.egg-info
 dist
 build
