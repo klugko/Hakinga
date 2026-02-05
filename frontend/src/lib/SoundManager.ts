@@ -60,7 +60,6 @@ class SoundManager {
     feedbackSounds: true,
     progressionSounds: true,
   };
-  private isInitialized = false;
 
   /**
    * Initialize the sound manager with user settings
@@ -69,7 +68,6 @@ class SoundManager {
     if (settings) {
       this.settings = { ...this.settings, ...settings };
     }
-    this.isInitialized = true;
   }
 
   /**

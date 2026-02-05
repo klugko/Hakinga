@@ -43,7 +43,7 @@ interface ProgressionProviderProps {
 }
 
 export function ProgressionProvider({ children }: ProgressionProviderProps) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

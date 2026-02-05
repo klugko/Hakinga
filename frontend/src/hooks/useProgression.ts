@@ -1,6 +1,6 @@
 import { useProgression as useProgressionContext } from '@/contexts/ProgressionContext';
 import { useMemo } from 'react';
-import type { LevelInfo, RankTier } from '@/types';
+import type { RankTier } from '@/types';
 import { RANK_COLORS } from '@/types';
 
 /**

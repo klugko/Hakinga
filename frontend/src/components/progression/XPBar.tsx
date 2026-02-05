@@ -1,7 +1,6 @@
 import { cn } from '@/lib/utils';
 import type { LevelInfo, RankTier } from '@/types';
 import { RANK_COLORS } from '@/types';
-import { useMemo } from 'react';
 
 interface XPBarProps {
   levelInfo: LevelInfo;

@@ -27,7 +27,7 @@ export function Confetti({
   colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'],
 }: ConfettiProps) {
   const [particles, setParticles] = useState<Particle[]>([]);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
