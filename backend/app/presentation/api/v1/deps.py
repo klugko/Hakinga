@@ -16,6 +16,7 @@ from app.application.services.achievement_service import AchievementService
 from app.application.services.friend_service import FriendService
 from app.application.services.leaderboard_service import LeaderboardService
 from app.application.services.settings_service import SettingsService
+from app.application.services.xp_service import XPService
 from app.core.security import decode_token
 from app.domain.entities.user import User
 from app.infrastructure.database.session import get_db
@@ -26,6 +27,7 @@ from app.infrastructure.repositories.achievement_repository_impl import Postgres
 from app.infrastructure.repositories.friend_repository_impl import PostgresFriendRepository
 from app.infrastructure.repositories.leaderboard_repository_impl import PostgresLeaderboardRepository
 from app.infrastructure.repositories.settings_repository_impl import PostgresSettingsRepository
+from app.infrastructure.repositories.progression_repository_impl import PostgresProgressionRepository
 from app.infrastructure.email.email_service import EmailService
 
 # Type alias for database session dependency
@@ -71,6 +73,11 @@ def get_settings_repository(db: DbSession) -> PostgresSettingsRepository:
     return PostgresSettingsRepository(db)
 
 
+def get_progression_repository(db: DbSession) -> PostgresProgressionRepository:
+    """Get progression repository instance."""
+    return PostgresProgressionRepository(db)
+
+
 def get_email_service() -> EmailService:
     """Get email service instance."""
     return EmailService()
@@ -97,9 +104,10 @@ def get_session_service(
     session_repo: Annotated[PostgresSessionRepository, Depends(get_session_repository)],
     user_repo: Annotated[PostgresUserRepository, Depends(get_user_repository)],
     text_repo: Annotated[PostgresTextRepository, Depends(get_text_repository)],
+    progression_repo: Annotated[PostgresProgressionRepository, Depends(get_progression_repository)],
 ) -> SessionService:
     """Get session service instance."""
-    return SessionService(session_repo, user_repo, text_repo)
+    return SessionService(session_repo, user_repo, text_repo, progression_repo)
 
 
 def get_text_service(
@@ -137,6 +145,13 @@ def get_settings_service(
 ) -> SettingsService:
     """Get settings service instance."""
     return SettingsService(settings_repo)
+
+
+def get_xp_service(
+    progression_repo: Annotated[PostgresProgressionRepository, Depends(get_progression_repository)],
+) -> XPService:
+    """Get XP service instance."""
+    return XPService(progression_repo)
 
 
 # Authentication dependency

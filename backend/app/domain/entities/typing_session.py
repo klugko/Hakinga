@@ -50,6 +50,8 @@ class TypingSession:
     wpm_history: List[WpmDataPoint] = field(default_factory=list)
     private_session_id: Optional[UUID] = None
     competition_id: Optional[UUID] = None
+    max_combo: int = 0
+    xp_earned: int = 0
 
     @property
     def characters_per_minute(self) -> int:

@@ -23,6 +23,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.entities.friend import FriendRequestStatus
 from app.domain.entities.private_session import PrivateSessionStatus
+from app.domain.entities.progression import RankTier
 from app.domain.entities.typing_session import SessionMode
 from app.domain.entities.typing_text import Difficulty, TextLength
 from app.infrastructure.database.base import Base, TimestampMixin
@@ -113,6 +114,9 @@ class TypingSessionModel(Base):
         PGUUID(as_uuid=True), nullable=True
     )
     competition_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    # Gamification fields
+    max_combo: Mapped[int] = mapped_column(Integer, default=0)
+    xp_earned: Mapped[int] = mapped_column(Integer, default=0)
 
     user: Mapped["UserModel"] = relationship(back_populates="sessions")
 
@@ -242,4 +246,28 @@ class SessionPlayerModel(Base, TimestampMixin):
     finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session: Mapped["PrivateSessionModel"] = relationship(back_populates="players")
+    user: Mapped["UserModel"] = relationship()
+
+
+class UserProgressModel(Base, TimestampMixin):
+    """User progression database model for XP, levels, and ranking."""
+
+    __tablename__ = "user_progress"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
+    total_xp: Mapped[int] = mapped_column(Integer, default=0)
+    current_level: Mapped[int] = mapped_column(Integer, default=1)
+    current_streak: Mapped[int] = mapped_column(Integer, default=0)
+    best_streak: Mapped[int] = mapped_column(Integer, default=0)
+    last_session_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    rank_tier: Mapped[RankTier] = mapped_column(
+        Enum(RankTier), default=RankTier.UNRANKED
+    )
+    mmr: Mapped[int] = mapped_column(Integer, default=1000)
+
     user: Mapped["UserModel"] = relationship()

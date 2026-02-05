@@ -10,5 +10,6 @@ export { leaderboardService } from './leaderboardService';
 export { achievementService } from './achievementService';
 export { friendService } from './friendService';
 export { settingsService } from './settingsService';
+export { progressionService } from './progressionService';
 export { getRandomQuote, initQuoteService } from './quoteService';
 export type { UserSettings } from './settingsService';

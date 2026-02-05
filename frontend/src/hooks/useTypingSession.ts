@@ -1,10 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { CharacterState, WpmDataPoint, TypingSession } from '@/types';
+import type { CharacterState, WpmDataPoint, TypingSession, ComboState, ComboTier } from '@/types';
 import { calculateWpm, calculateAccuracy } from '@/lib/utils';
+import { COMBO_TIERS } from '@/types';
 
 interface UseTypingSessionOptions {
   text: string;
-  onComplete?: (session: Partial<TypingSession>) => void;
+  onComplete?: (session: Partial<TypingSession> & { maxCombo: number }) => void;
+  onComboMilestone?: (tier: ComboTier, combo: number) => void;
+  onComboBreak?: (finalCombo: number, maxCombo: number) => void;
 }
 
 interface LastKeyPress {
@@ -30,9 +33,25 @@ interface UseTypingSessionReturn {
   reset: () => void;
   progress: number;
   lastKeyPress: LastKeyPress | null;
+  combo: ComboState;
 }
 
-export function useTypingSession({ text, onComplete }: UseTypingSessionOptions): UseTypingSessionReturn {
+function getComboTier(combo: number): ComboTier {
+  if (combo >= COMBO_TIERS.legendary.threshold) return 'legendary';
+  if (combo >= COMBO_TIERS.unstoppable.threshold) return 'unstoppable';
+  if (combo >= COMBO_TIERS.incredible.threshold) return 'incredible';
+  if (combo >= COMBO_TIERS.amazing.threshold) return 'amazing';
+  if (combo >= COMBO_TIERS.great.threshold) return 'great';
+  if (combo >= COMBO_TIERS.nice.threshold) return 'nice';
+  return 'none';
+}
+
+export function useTypingSession({
+  text,
+  onComplete,
+  onComboMilestone,
+  onComboBreak,
+}: UseTypingSessionOptions): UseTypingSessionReturn {
   // Initialize characters from text
   const initializeCharacters = useCallback((): CharacterState[] => {
     return text.split('').map((char, index) => ({
@@ -52,15 +71,62 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
   const [wpmHistory, setWpmHistory] = useState<WpmDataPoint[]>([]);
   const [lastKeyPress, setLastKeyPress] = useState<LastKeyPress | null>(null);
 
+  // Combo state
+  const [combo, setCombo] = useState<ComboState>({
+    current: 0,
+    max: 0,
+    tier: 'none',
+    isActive: false,
+  });
+
   const startTimeRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
   const wpmIntervalRef = useRef<number | null>(null);
+  const previousTierRef = useRef<ComboTier>('none');
 
   // Calculate stats
   const wpm = calculateWpm(correctCharacters, elapsedTime);
   const rawWpm = calculateWpm(totalKeystrokes, elapsedTime);
   const accuracy = calculateAccuracy(correctCharacters, totalKeystrokes);
   const progress = (currentIndex / text.length) * 100;
+
+  // Handle combo increment
+  const incrementCombo = useCallback(() => {
+    setCombo(prev => {
+      const newCurrent = prev.current + 1;
+      const newMax = Math.max(prev.max, newCurrent);
+      const newTier = getComboTier(newCurrent);
+
+      // Check for milestone (tier change)
+      if (newTier !== previousTierRef.current && newTier !== 'none') {
+        previousTierRef.current = newTier;
+        onComboMilestone?.(newTier, newCurrent);
+      }
+
+      return {
+        current: newCurrent,
+        max: newMax,
+        tier: newTier,
+        isActive: true,
+      };
+    });
+  }, [onComboMilestone]);
+
+  // Handle combo break
+  const breakCombo = useCallback(() => {
+    setCombo(prev => {
+      if (prev.current > 0) {
+        onComboBreak?.(prev.current, prev.max);
+      }
+      previousTierRef.current = 'none';
+      return {
+        ...prev,
+        current: 0,
+        tier: 'none',
+        isActive: false,
+      };
+    });
+  }, [onComboBreak]);
 
   // Start the session
   const start = useCallback(() => {
@@ -107,9 +173,9 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
         setCharacters(prev => {
           const updated = [...prev];
           const prevChar = updated[currentIndex - 1];
-          if (prevChar.status === 'incorrect') {
-            setErrors(e => Math.max(0, e - 1));
-          } else if (prevChar.status === 'correct') {
+          // Only decrement correctCharacters, NOT errors
+          // Errors are permanent - they count all mistakes even if corrected
+          if (prevChar.status === 'correct') {
             setCorrectCharacters(c => Math.max(0, c - 1));
           }
           updated[currentIndex - 1] = { ...prevChar, status: 'current' };
@@ -136,8 +202,10 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
 
     if (isCorrect) {
       setCorrectCharacters(prev => prev + 1);
+      incrementCombo();
     } else {
       setErrors(prev => prev + 1);
+      breakCombo();
     }
 
     setCharacters(prev => {
@@ -199,6 +267,9 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
       const finalWpm = calculateWpm(finalCorrect, finalTime);
       const finalAccuracy = calculateAccuracy(finalCorrect, totalKeystrokes + 1);
 
+      // Get final max combo
+      const finalMaxCombo = Math.max(combo.max, combo.current + (isCorrect ? 1 : 0));
+
       onComplete?.({
         wpm: finalWpm,
         rawWpm: calculateWpm(totalKeystrokes + 1, finalTime),
@@ -208,9 +279,23 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
         totalCharacters: text.length,
         duration: finalTime,
         wpmHistory,
+        maxCombo: finalMaxCombo,
       });
     }
-  }, [currentIndex, text, isStarted, isCompleted, correctCharacters, totalKeystrokes, errors, wpmHistory, onComplete]);
+  }, [
+    currentIndex,
+    text,
+    isStarted,
+    isCompleted,
+    correctCharacters,
+    totalKeystrokes,
+    errors,
+    wpmHistory,
+    onComplete,
+    combo,
+    incrementCombo,
+    breakCombo,
+  ]);
 
   // Reset the session
   const reset = useCallback(() => {
@@ -234,6 +319,13 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
     setElapsedTime(0);
     setWpmHistory([]);
     setLastKeyPress(null);
+    setCombo({
+      current: 0,
+      max: 0,
+      tier: 'none',
+      isActive: false,
+    });
+    previousTierRef.current = 'none';
     startTimeRef.current = null;
   }, [initializeCharacters]);
 
@@ -267,5 +359,6 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
     reset,
     progress,
     lastKeyPress,
+    combo,
   };
 }

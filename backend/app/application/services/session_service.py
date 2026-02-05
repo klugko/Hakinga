@@ -1,31 +1,138 @@
 """
 Typing session service.
 
-Handles typing session creation and management.
+Handles typing session creation and management with XP integration.
 """
 from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID, uuid4
 
+from app.domain.entities.progression import XPGain, LevelInfo
 from app.domain.entities.typing_session import SessionMode, TypingSession, WpmDataPoint
 from app.domain.exceptions import EntityNotFoundError
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.text_repository import TextRepository
 from app.domain.repositories.user_repository import UserRepository
+from app.domain.repositories.progression_repository import ProgressionRepository
+from app.application.services.xp_service import XPService
 
 
 class SessionService:
-    """Service handling typing session operations."""
+    """Service handling typing session operations with XP integration."""
 
     def __init__(
         self,
         session_repository: SessionRepository,
         user_repository: UserRepository,
         text_repository: TextRepository,
+        progression_repository: Optional[ProgressionRepository] = None,
     ):
         self._session_repo = session_repository
         self._user_repo = user_repository
         self._text_repo = text_repository
+        self._progression_repo = progression_repository
+        self._xp_service = XPService(progression_repository) if progression_repository else None
+
+    async def create_session(
+        self,
+        user_id: str,
+        text_id: str,
+        text_content: str,
+        wpm: int,
+        raw_wpm: int,
+        accuracy: float,
+        errors: int,
+        total_characters: int,
+        correct_characters: int,
+        duration: int,
+        started_at: datetime,
+        completed_at: datetime,
+        mode: SessionMode,
+        wpm_history: list[dict],
+        max_combo: int = 0,
+        difficulty: str = "medium",
+    ) -> tuple[TypingSession, Optional[XPGain], Optional[LevelInfo], bool, int]:
+        """
+        Create a new typing session with XP calculation.
+
+        Args:
+            user_id: User's ID as string.
+            text_id: Text ID that was typed.
+            text_content: The actual text content.
+            wpm: Final words per minute.
+            raw_wpm: Raw WPM including errors.
+            accuracy: Accuracy percentage.
+            errors: Number of errors.
+            total_characters: Total characters typed.
+            correct_characters: Correctly typed characters.
+            duration: Session duration in seconds.
+            started_at: Session start time.
+            completed_at: Session completion time.
+            mode: Session mode.
+            wpm_history: WPM history data points.
+            max_combo: Maximum combo achieved.
+            difficulty: Text difficulty level.
+
+        Returns:
+            Tuple of (session, xp_gain, level_info, leveled_up, new_streak).
+        """
+        uid = UUID(user_id) if isinstance(user_id, str) else user_id
+        tid = UUID(text_id) if isinstance(text_id, str) else text_id
+
+        user = await self._user_repo.get_by_id(uid)
+        if not user:
+            raise EntityNotFoundError("User", str(uid))
+
+        session = TypingSession(
+            id=uuid4(),
+            user_id=uid,
+            text_id=tid,
+            text_content=text_content,
+            wpm=wpm,
+            raw_wpm=raw_wpm,
+            accuracy=accuracy,
+            errors=errors,
+            total_characters=total_characters,
+            correct_characters=correct_characters,
+            duration=duration,
+            started_at=started_at,
+            completed_at=completed_at,
+            mode=mode,
+            wpm_history=[
+                WpmDataPoint(time=p["time"], wpm=p["wpm"], accuracy=p["accuracy"])
+                for p in wpm_history
+            ],
+            max_combo=max_combo,
+        )
+
+        created_session = await self._session_repo.create(session)
+
+        # Update user stats
+        previous_best_wpm = user.stats.best_wpm
+        user.update_stats(wpm, accuracy, duration, total_characters)
+        await self._user_repo.update(user)
+
+        # Calculate and award XP if progression system is available
+        xp_gain = None
+        level_info = None
+        leveled_up = False
+        new_streak = 0
+
+        if self._xp_service:
+            xp_gain, level_info, leveled_up, new_streak = await self._xp_service.award_session_xp(
+                user_id=uid,
+                wpm=wpm,
+                accuracy=accuracy,
+                total_characters=total_characters,
+                difficulty=difficulty,
+                mode=mode,
+                previous_best_wpm=previous_best_wpm,
+            )
+
+            # Update session with XP earned
+            created_session.xp_earned = xp_gain.total_xp
+
+        return created_session, xp_gain, level_info, leveled_up, new_streak
 
     async def create_solo_session(
         self,
@@ -40,7 +147,9 @@ class SessionService:
         correct_characters: int,
         duration: int,
         wpm_history: list[dict],
-    ) -> TypingSession:
+        max_combo: int = 0,
+        difficulty: str = "medium",
+    ) -> tuple[TypingSession, Optional[XPGain], Optional[LevelInfo], bool, int]:
         """
         Create a new solo typing session.
 
@@ -56,20 +165,17 @@ class SessionService:
             correct_characters: Correctly typed characters.
             duration: Session duration in seconds.
             wpm_history: WPM history data points.
+            max_combo: Maximum combo achieved.
+            difficulty: Text difficulty level.
 
         Returns:
-            Created typing session.
+            Tuple of (session, xp_gain, level_info, leveled_up, new_streak).
         """
-        user = await self._user_repo.get_by_id(user_id)
-        if not user:
-            raise EntityNotFoundError("User", str(user_id))
-
         now = datetime.now(timezone.utc)
 
-        session = TypingSession(
-            id=uuid4(),
-            user_id=user_id,
-            text_id=text_id,
+        return await self.create_session(
+            user_id=str(user_id),
+            text_id=str(text_id),
             text_content=text_content,
             wpm=wpm,
             raw_wpm=raw_wpm,
@@ -78,23 +184,34 @@ class SessionService:
             total_characters=total_characters,
             correct_characters=correct_characters,
             duration=duration,
-            started_at=datetime.fromtimestamp(
-                now.timestamp() - duration, tz=timezone.utc
-            ),
+            started_at=datetime.fromtimestamp(now.timestamp() - duration, tz=timezone.utc),
             completed_at=now,
             mode=SessionMode.SOLO,
-            wpm_history=[
-                WpmDataPoint(time=p["time"], wpm=p["wpm"], accuracy=p["accuracy"])
-                for p in wpm_history
-            ],
+            wpm_history=wpm_history,
+            max_combo=max_combo,
+            difficulty=difficulty,
         )
 
-        created_session = await self._session_repo.create(session)
+    async def get_session_by_id(self, session_id: str) -> TypingSession:
+        """
+        Get a session by ID.
 
-        user.update_stats(wpm, accuracy, duration, total_characters)
-        await self._user_repo.update(user)
+        Args:
+            session_id: Session ID as string.
 
-        return created_session
+        Returns:
+            TypingSession if found.
+
+        Raises:
+            EntityNotFoundError: If session not found.
+        """
+        sid = UUID(session_id) if isinstance(session_id, str) else session_id
+        session = await self._session_repo.get_by_id(sid)
+
+        if not session:
+            raise EntityNotFoundError("Session", str(sid))
+
+        return session
 
     async def get_session_history(
         self,
@@ -165,6 +282,8 @@ class SessionService:
                     "mode": s.mode.value,
                     "started_at": s.started_at.isoformat(),
                     "completed_at": s.completed_at.isoformat(),
+                    "max_combo": getattr(s, 'max_combo', 0),
+                    "xp_earned": getattr(s, 'xp_earned', 0),
                 }
                 for s in sessions
             ],

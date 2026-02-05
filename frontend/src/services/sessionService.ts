@@ -2,7 +2,7 @@
  * Typing Session Service
  */
 import { apiClient } from './api';
-import type { TypingSession, WpmDataPoint } from '@/types';
+import type { TypingSession, WpmDataPoint, SessionWithXP, XPBreakdown, LevelInfo } from '@/types';
 
 interface SessionResponse {
   id: string;
@@ -21,6 +21,31 @@ interface SessionResponse {
   wpm_history: Array<{ time: number; wpm: number; accuracy: number }>;
 }
 
+interface SessionWithXPResponse extends SessionResponse {
+  max_combo: number;
+  xp_earned: number;
+  xp_breakdown?: {
+    base_xp: number;
+    difficulty_multiplier: number;
+    mode_multiplier: number;
+    streak_bonus: number;
+    perfect_accuracy_bonus: number;
+    personal_best_bonus: number;
+    total_xp: number;
+  };
+  level_info?: {
+    level: number;
+    current_xp: number;
+    xp_for_current_level: number;
+    xp_for_next_level: number;
+    progress_percent: number;
+    xp_needed: number;
+  };
+  leveled_up: boolean;
+  new_level?: number;
+  new_streak: number;
+}
+
 interface SessionListResponse {
   id: string;
   text_id: string;
@@ -33,6 +58,8 @@ interface SessionListResponse {
   mode: string;
   started_at: string;
   completed_at: string;
+  max_combo?: number;
+  xp_earned?: number;
 }
 
 interface SessionHistoryResponse {
@@ -53,6 +80,8 @@ interface CreateSessionRequest {
   correct_characters: number;
   duration: number;
   wpm_history: Array<{ time: number; wpm: number; accuracy: number }>;
+  max_combo: number;
+  difficulty: string;
 }
 
 function mapSessionResponse(response: SessionResponse): TypingSession {
@@ -76,6 +105,46 @@ function mapSessionResponse(response: SessionResponse): TypingSession {
       wpm: h.wpm,
       accuracy: h.accuracy,
     })),
+  };
+}
+
+function mapSessionWithXPResponse(response: SessionWithXPResponse): SessionWithXP {
+  const baseSession = mapSessionResponse(response);
+
+  let xpBreakdown: XPBreakdown | undefined;
+  if (response.xp_breakdown) {
+    xpBreakdown = {
+      baseXp: response.xp_breakdown.base_xp,
+      difficultyMultiplier: response.xp_breakdown.difficulty_multiplier,
+      modeMultiplier: response.xp_breakdown.mode_multiplier,
+      streakBonus: response.xp_breakdown.streak_bonus,
+      perfectAccuracyBonus: response.xp_breakdown.perfect_accuracy_bonus,
+      personalBestBonus: response.xp_breakdown.personal_best_bonus,
+      totalXp: response.xp_breakdown.total_xp,
+    };
+  }
+
+  let levelInfo: LevelInfo | undefined;
+  if (response.level_info) {
+    levelInfo = {
+      level: response.level_info.level,
+      currentXp: response.level_info.current_xp,
+      xpForCurrentLevel: response.level_info.xp_for_current_level,
+      xpForNextLevel: response.level_info.xp_for_next_level,
+      progressPercent: response.level_info.progress_percent,
+      xpNeeded: response.level_info.xp_needed,
+    };
+  }
+
+  return {
+    ...baseSession,
+    maxCombo: response.max_combo || 0,
+    xpEarned: response.xp_earned || 0,
+    xpBreakdown,
+    levelInfo,
+    leveledUp: response.leveled_up || false,
+    newLevel: response.new_level,
+    newStreak: response.new_streak || 0,
   };
 }
 
@@ -111,7 +180,9 @@ export const sessionService = {
     correctCharacters: number;
     duration: number;
     wpmHistory: WpmDataPoint[];
-  }): Promise<TypingSession> {
+    maxCombo?: number;
+    difficulty?: string;
+  }): Promise<SessionWithXP> {
     const request: CreateSessionRequest = {
       text_id: data.textId,
       text: data.text,
@@ -127,9 +198,11 @@ export const sessionService = {
         wpm: h.wpm,
         accuracy: h.accuracy,
       })),
+      max_combo: data.maxCombo || 0,
+      difficulty: data.difficulty || 'medium',
     };
-    const response = await apiClient.post<SessionResponse>('/sessions', request);
-    return mapSessionResponse(response);
+    const response = await apiClient.post<SessionWithXPResponse>('/sessions', request);
+    return mapSessionWithXPResponse(response);
   },
 
   async getSessionHistory(options?: {

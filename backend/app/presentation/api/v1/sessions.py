@@ -17,26 +17,29 @@ from app.presentation.schemas.session import (
     SessionHistoryResponse,
     SessionListResponse,
     SessionResponse,
+    SessionWithXPResponse,
     WpmDataPointSchema,
+    XPBreakdownSchema,
+    LevelInfoSchema,
 )
 
 router = APIRouter()
 
 
-@router.post("", response_model=ApiResponse[SessionResponse])
+@router.post("", response_model=ApiResponse[SessionWithXPResponse])
 async def create_session(
     request: CreateSessionRequest,
     current_user: CurrentUser,
     session_service: Annotated[SessionService, Depends(get_session_service)],
-) -> ApiResponse[SessionResponse]:
-    """Create a new typing session (save session results)."""
+) -> ApiResponse[SessionWithXPResponse]:
+    """Create a new typing session (save session results) with XP calculation."""
     try:
         now = datetime.now(timezone.utc)
         started_at = datetime.fromtimestamp(
             now.timestamp() - request.duration, tz=timezone.utc
         )
 
-        session = await session_service.create_session(
+        session, xp_gain, level_info, leveled_up, new_streak = await session_service.create_session(
             user_id=str(current_user.id),
             text_id=request.text_id,
             text_content=request.text,
@@ -54,10 +57,34 @@ async def create_session(
                 {"time": h.time, "wpm": h.wpm, "accuracy": h.accuracy}
                 for h in request.wpm_history
             ],
+            max_combo=getattr(request, 'max_combo', 0),
+            difficulty=getattr(request, 'difficulty', 'medium'),
         )
 
+        # Build XP response
+        xp_response = None
+        level_response = None
+        if xp_gain and level_info:
+            xp_response = XPBreakdownSchema(
+                base_xp=xp_gain.base_xp,
+                difficulty_multiplier=xp_gain.difficulty_multiplier,
+                mode_multiplier=xp_gain.mode_multiplier,
+                streak_bonus=xp_gain.streak_bonus,
+                perfect_accuracy_bonus=xp_gain.perfect_accuracy_bonus,
+                personal_best_bonus=xp_gain.personal_best_bonus,
+                total_xp=xp_gain.total_xp,
+            )
+            level_response = LevelInfoSchema(
+                level=level_info.level,
+                current_xp=level_info.current_xp,
+                xp_for_current_level=level_info.xp_for_current_level,
+                xp_for_next_level=level_info.xp_for_next_level,
+                progress_percent=level_info.progress_percent,
+                xp_needed=level_info.xp_needed,
+            )
+
         return ApiResponse(
-            data=SessionResponse(
+            data=SessionWithXPResponse(
                 id=str(session.id),
                 user_id=str(session.user_id),
                 text_id=str(session.text_id),
@@ -75,6 +102,13 @@ async def create_session(
                     WpmDataPointSchema(time=h.time, wpm=h.wpm, accuracy=h.accuracy)
                     for h in session.wpm_history
                 ],
+                max_combo=session.max_combo,
+                xp_earned=session.xp_earned,
+                xp_breakdown=xp_response,
+                level_info=level_response,
+                leveled_up=leveled_up,
+                new_level=level_info.level if leveled_up else None,
+                new_streak=new_streak,
             )
         )
     except ValidationError as e:
