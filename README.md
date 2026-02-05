@@ -356,7 +356,7 @@ App: `http://localhost:5173`
 ```env
 # PostgreSQL
 POSTGRES_USER=hakinga
-POSTGRES_PASSWORD=hakinga_secret
+POSTGRES_PASSWORD=<your-secure-password>
 POSTGRES_DB=hakinga
 POSTGRES_PORT=5432
 
@@ -364,7 +364,7 @@ POSTGRES_PORT=5432
 REDIS_PORT=6379
 
 # Backend
-SECRET_KEY=change-me-in-production
+SECRET_KEY=<generate-a-secure-key>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
