@@ -8,6 +8,7 @@
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
 A smart typing training platform that uses **Machine Learning** to analyze your typing patterns, identify weaknesses, and provide personalized training recommendations.
 
@@ -54,6 +55,8 @@ Hakinga is a full-stack web application designed to help users master touch typi
 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)
 
 </div>
@@ -197,13 +200,84 @@ frontend/
 
 ## Getting Started
 
-### Prerequisites
+### Quick Start with Docker (Recommended)
+
+The fastest way to run Hakinga is using Docker Compose.
+
+#### Prerequisites
+
+![Docker](https://img.shields.io/badge/Docker-20.10+-2496ED?style=flat-square&logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker_Compose-2.0+-2496ED?style=flat-square&logo=docker&logoColor=white)
+
+#### Run with Docker
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/hakinga.git
+cd hakinga
+
+# Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your settings (optional for local development)
+
+# Build and start all services
+docker compose up -d --build
+
+# View logs
+docker compose logs -f
+```
+
+The application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+
+#### Docker Services
+
+| Service | Description | Port |
+|---------|-------------|------|
+| `frontend` | React SPA served by Nginx | 3000 |
+| `backend` | FastAPI application | 8000 |
+| `db` | PostgreSQL 16 database | 5432 |
+| `redis` | Redis cache | 6379 |
+
+#### Docker Commands
+
+```bash
+# Start services
+docker compose up --build
+
+# Stop services
+docker compose down
+
+# View logs
+docker compose logs -f [service-name]
+
+# Rebuild specific service
+docker compose build [service-name]
+
+# Reset database (caution: deletes all data)
+docker compose down -v
+docker compose up -d
+
+# Access database shell
+docker compose exec db psql -U hakinga -d hakinga
+
+# Run backend shell
+docker compose exec backend bash
+```
+
+---
+
+### Manual Installation (Development)
+
+#### Prerequisites
 
 ![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 
-### Installation
+#### Installation
 
 1. **Clone the repository**
    ```bash
@@ -233,10 +307,11 @@ frontend/
 5. **Set up the frontend**
    ```bash
    cd ../frontend
+   cp .env.example .env
    npm install
    ```
 
-### Running the Application
+#### Running the Application
 
 <table>
 <tr>
@@ -276,37 +351,125 @@ App: `http://localhost:5173`
 ## Environment Variables
 
 <details>
-<summary><b>Backend Configuration</b></summary>
+<summary><b>Docker Compose Configuration (.env)</b></summary>
 
 ```env
-# Database
-DATABASE_URL=postgresql+asyncpg://user:password@localhost/hakinga
+# PostgreSQL
+POSTGRES_USER=hakinga
+POSTGRES_PASSWORD=hakinga_secret
+POSTGRES_DB=hakinga
+POSTGRES_PORT=5432
 
-# Security
-SECRET_KEY=your-secret-key-here
-DEBUG=true
+# Redis
+REDIS_PORT=6379
 
-# Email (optional)
-EMAIL_HOST=smtp.example.com
-EMAIL_HOST_USER=your-email@example.com
-EMAIL_HOST_PASSWORD=your-password
-EMAIL_PORT=587
-EMAIL_FROM=noreply@hakinga.com
+# Backend
+SECRET_KEY=change-me-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+DATABASE_POOL_SIZE=5
+DATABASE_MAX_OVERFLOW=10
+CORS_ORIGINS=["http://localhost:3000"]
+DEBUG=false
+RUN_MIGRATIONS=true
 
-# Redis (optional)
-REDIS_URL=redis://localhost:6379
+# Frontend
+VITE_API_URL=http://localhost:8000/api/v1
+
+# Ports
+BACKEND_PORT=8000
+FRONTEND_PORT=3000
 ```
 
 </details>
 
 <details>
-<summary><b>Frontend Configuration</b></summary>
+<summary><b>Backend Configuration (backend/.env)</b></summary>
+
+```env
+# Database
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/hakinga
+DATABASE_POOL_SIZE=5
+DATABASE_MAX_OVERFLOW=10
+
+# Security
+SECRET_KEY=your-secret-key-here
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Application
+DEBUG=true
+APP_NAME=Hakinga API
+API_V1_PREFIX=/api/v1
+
+# CORS
+CORS_ORIGINS=["http://localhost:5173", "http://localhost:3000"]
+
+# Redis (optional)
+REDIS_URL=redis://localhost:6379
+
+# Email (optional - required for password reset)
+EMAIL_HOST=smtp.example.com
+EMAIL_HOST_USER=your-email@example.com
+EMAIL_HOST_PASSWORD=your-password
+EMAIL_PORT=587
+EMAIL_FROM=noreply@hakinga.com
+```
+
+</details>
+
+<details>
+<summary><b>Frontend Configuration (frontend/.env)</b></summary>
 
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 </details>
+
+---
+
+## Production Deployment
+
+### Security Checklist
+
+Before deploying to production, ensure you:
+
+- [ ] Generate a strong `SECRET_KEY` using: `python -c "import secrets; print(secrets.token_urlsafe(64))"`
+- [ ] Set `DEBUG=false`
+- [ ] Use strong database passwords
+- [ ] Configure proper CORS origins
+- [ ] Set up HTTPS (use a reverse proxy like Nginx or Traefik)
+- [ ] Configure email settings for password reset functionality
+
+### Docker Production Tips
+
+```bash
+# Build for production
+docker compose build --no-cache
+
+# Run in detached mode
+docker compose up -d
+
+# Scale backend (if needed)
+docker compose up -d --scale backend=3
+
+# View resource usage
+docker compose stats
+```
+
+### Health Checks
+
+All services include health checks:
+
+| Service | Endpoint | Interval |
+|---------|----------|----------|
+| Backend | `GET /health` | 30s |
+| Frontend | `GET /health` | 30s |
+| Database | `pg_isready` | 10s |
+| Redis | `redis-cli ping` | 10s |
 
 ---
 

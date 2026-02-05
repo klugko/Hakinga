@@ -1,0 +1,147 @@
+# =============================================================================
+# Hakinga - Docker Compose Configuration
+# =============================================================================
+# Development and production orchestration for all services
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: hakinga-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hakinga}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hakinga_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-hakinga}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hakinga} -d ${POSTGRES_DB:-hakinga}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - hakinga-network
+
+  # ---------------------------------------------------------------------------
+  # Redis Cache (Optional)
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: hakinga-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hakinga-network
+
+  # ---------------------------------------------------------------------------
+  # Backend API
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hakinga-backend
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-hakinga}:${POSTGRES_PASSWORD:-hakinga_secret}@db:5432/${POSTGRES_DB:-hakinga}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-5}
+      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-10}
+
+      # Security
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-with-secure-random-key}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173","http://localhost"]}
+
+      # App
+      DEBUG: ${DEBUG:-false}
+      APP_NAME: ${APP_NAME:-Hakinga API}
+      API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
+
+      # Redis
+      REDIS_URL: redis://redis:6379
+
+      # Email
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@hakinga.com}
+
+      # Migration control
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - hakinga-network
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+    container_name: hakinga-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - hakinga-network
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  hakinga-network:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local

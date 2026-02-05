@@ -8,6 +8,7 @@ from app.presentation.api.v1 import (
     auth,
     friends,
     leaderboard,
+    progression,
     sessions,
     settings,
     texts,
@@ -26,3 +27,4 @@ api_router.include_router(achievements.router, prefix="/achievements", tags=["Ac
 api_router.include_router(friends.router, prefix="/friends", tags=["Friends"])
 api_router.include_router(settings.router, prefix="/settings", tags=["Settings"])
 api_router.include_router(training.router, prefix="/training", tags=["Training"])
+api_router.include_router(progression.router, prefix="/progression", tags=["Progression"])

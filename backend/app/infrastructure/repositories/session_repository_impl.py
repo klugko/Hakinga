@@ -44,6 +44,8 @@ class PostgresSessionRepository(SessionRepository):
             wpm_history=wpm_history,
             private_session_id=model.private_session_id,
             competition_id=model.competition_id,
+            max_combo=model.max_combo or 0,
+            xp_earned=model.xp_earned or 0,
         )
 
     def _to_model(self, entity: TypingSession) -> TypingSessionModel:
@@ -70,6 +72,8 @@ class PostgresSessionRepository(SessionRepository):
             wpm_history=wpm_history,
             private_session_id=entity.private_session_id,
             competition_id=entity.competition_id,
+            max_combo=entity.max_combo,
+            xp_earned=entity.xp_earned,
         )
 
     async def create(self, session: TypingSession) -> TypingSession:
