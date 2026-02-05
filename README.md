@@ -213,7 +213,7 @@ The fastest way to run Hakinga is using Docker Compose.
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/hakinga.git
+git clone https://github.com/klugko/Hakinga.git
 cd hakinga
 
 # Copy and configure environment variables
@@ -281,7 +281,7 @@ docker compose exec backend bash
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/hakinga.git
+   git clone https://github.com/klugko/Hakinga.git
    cd hakinga
    ```
 
