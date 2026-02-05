@@ -1,42 +1,23 @@
-import { Outlet } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
-/**
- * Main layout wrapper with header and footer
- */
-export function Layout() {
+interface LayoutProps {
+  children: ReactNode;
+  showHeader?: boolean;
+  showFooter?: boolean;
+}
+
+function Layout({ children, showHeader = true, showFooter = true }: LayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <Header />
-      <main className="flex-1 pt-16">
-        <Outlet />
+    <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
+      {showHeader && <Header />}
+      <main className={`flex-1 ${showHeader ? 'pt-20' : ''}`}>
+        {children}
       </main>
-      <Footer />
+      {showFooter && <Footer />}
     </div>
   );
 }
 
-/**
- * Clean layout for typing sessions without distractions
- */
-export function SessionLayout() {
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <main className="flex-1">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
-
-/**
- * Auth layout for login/register pages
- */
-export function AuthLayout() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Outlet />
-    </div>
-  );
-}
+export { Layout };

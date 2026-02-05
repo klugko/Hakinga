@@ -1,57 +1,37 @@
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
 
-interface SpinnerProps {
+export interface SpinnerProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-const sizeStyles = {
-  sm: 'w-4 h-4',
-  md: 'w-6 h-6',
-  lg: 'w-8 h-8',
-};
+function Spinner({ size = 'md', className }: SpinnerProps) {
+  const sizes = {
+    sm: 'w-4 h-4 border-2',
+    md: 'w-8 h-8 border-2',
+    lg: 'w-12 h-12 border-3',
+  };
 
-/**
- * Loading spinner component
- */
-export function Spinner({ size = 'md', className }: SpinnerProps) {
   return (
-    <Loader2
-      className={cn('animate-spin text-primary', sizeStyles[size], className)}
-      aria-label="Chargement..."
+    <div
+      className={cn(
+        'rounded-full border-[#2a2a2a] border-t-[#8b5cf6] animate-spin',
+        sizes[size],
+        className
+      )}
+      role="status"
+      aria-label="Loading"
     />
   );
 }
 
-interface LoadingOverlayProps {
-  message?: string;
-}
-
-/**
- * Full-screen loading overlay
- */
-export function LoadingOverlay({ message }: LoadingOverlayProps) {
+function LoadingScreen({ message }: { message?: string }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+    <div className="flex flex-col items-center justify-center min-h-[200px] gap-4">
       <Spinner size="lg" />
-      {message && <p className="mt-4 text-text-secondary">{message}</p>}
+      {message && <p className="text-[#a1a1aa] text-sm">{message}</p>}
     </div>
   );
 }
 
-interface LoadingCardProps {
-  message?: string;
-}
-
-/**
- * Loading state for cards and sections
- */
-export function LoadingCard({ message = 'Chargement...' }: LoadingCardProps) {
-  return (
-    <div className="flex flex-col items-center justify-center py-12">
-      <Spinner size="lg" />
-      <p className="mt-4 text-text-secondary">{message}</p>
-    </div>
-  );
-}
+export { Spinner, LoadingScreen };

@@ -1,68 +1,73 @@
-import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
-import { User } from 'lucide-react';
 
-interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
+export interface AvatarProps {
   src?: string;
   alt?: string;
-  fallback?: string;
+  name?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
+  status?: 'online' | 'offline' | 'in-game';
 }
 
-const sizeStyles = {
-  sm: 'w-8 h-8 text-xs',
-  md: 'w-10 h-10 text-sm',
-  lg: 'w-12 h-12 text-base',
-  xl: 'w-16 h-16 text-lg',
-};
+function Avatar({ src, alt, name, size = 'md', className, status }: AvatarProps) {
+  const sizes = {
+    sm: 'w-8 h-8 text-xs',
+    md: 'w-10 h-10 text-sm',
+    lg: 'w-12 h-12 text-base',
+    xl: 'w-16 h-16 text-lg',
+  };
 
-const iconSizes = {
-  sm: 'w-4 h-4',
-  md: 'w-5 h-5',
-  lg: 'w-6 h-6',
-  xl: 'w-8 h-8',
-};
+  const statusSizes = {
+    sm: 'w-2 h-2',
+    md: 'w-2.5 h-2.5',
+    lg: 'w-3 h-3',
+    xl: 'w-4 h-4',
+  };
 
-/**
- * Avatar component for user profile images
- */
-export function Avatar({
-  className,
-  src,
-  alt,
-  fallback,
-  size = 'md',
-  ...props
-}: AvatarProps) {
-  const initials = fallback
-    ? fallback
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : null;
+  const statusColors = {
+    online: 'bg-[#22c55e]',
+    offline: 'bg-[#71717a]',
+    'in-game': 'bg-[#8b5cf6]',
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
-    <div
-      className={cn(
-        'relative flex items-center justify-center rounded-full bg-surface-hover border border-border overflow-hidden',
-        sizeStyles[size],
-        className
-      )}
-      {...props}
-    >
+    <div className={cn('relative inline-block', className)}>
       {src ? (
         <img
           src={src}
-          alt={alt || 'Avatar'}
-          className="w-full h-full object-cover"
+          alt={alt || name || 'Avatar'}
+          className={cn('rounded-full object-cover bg-[#252525]', sizes[size])}
         />
-      ) : initials ? (
-        <span className="font-medium text-text-secondary">{initials}</span>
       ) : (
-        <User className={cn('text-text-muted', iconSizes[size])} />
+        <div
+          className={cn(
+            'rounded-full bg-[#8b5cf6] flex items-center justify-center font-medium text-white',
+            sizes[size]
+          )}
+        >
+          {name ? getInitials(name) : '?'}
+        </div>
+      )}
+      {status && (
+        <span
+          className={cn(
+            'absolute bottom-0 right-0 rounded-full border-2 border-[#0f0f0f]',
+            statusSizes[size],
+            statusColors[status]
+          )}
+        />
       )}
     </div>
   );
 }
+
+export { Avatar };

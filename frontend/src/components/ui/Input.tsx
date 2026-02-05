@@ -1,48 +1,31 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { type InputHTMLAttributes, forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
-  hint?: string;
-  leftIcon?: ReactNode;
-  rightIcon?: ReactNode;
-  fullWidth?: boolean;
+  helperText?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
-/**
- * Input component with label, error, and icon support
- */
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  (
-    {
-      className,
-      label,
-      error,
-      hint,
-      leftIcon,
-      rightIcon,
-      fullWidth = true,
-      id,
-      ...props
-    },
-    ref
-  ) => {
-    const inputId = id || `input-${Math.random().toString(36).slice(2, 9)}`;
+const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, helperText, leftIcon, rightIcon, id, ...props }, ref) => {
+    const inputId = id || label?.toLowerCase().replace(/\s/g, '-');
 
     return (
-      <div className={cn('flex flex-col gap-1.5', fullWidth && 'w-full')}>
+      <div className="w-full">
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-medium text-text-secondary"
+            className="block text-sm font-medium text-[#a1a1aa] mb-1.5"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#71717a]">
               {leftIcon}
             </div>
           )}
@@ -50,29 +33,35 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full h-10 px-4 py-2 rounded-lg',
-              'bg-surface border border-border text-text placeholder:text-text-muted',
-              'transition-all duration-200',
-              'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+              'w-full bg-[#1a1a1a] border rounded-lg px-4 py-2.5 text-white placeholder:text-[#71717a]',
+              'transition-colors duration-200',
+              'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0f0f0f]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              leftIcon && 'pl-10',
-              rightIcon && 'pr-10',
-              error && 'border-error focus:border-error focus:ring-error/20',
+              error
+                ? 'border-[#ef4444] focus:ring-[#ef4444]'
+                : 'border-[#2a2a2a] focus:border-[#8b5cf6] focus:ring-[#8b5cf6]',
+              leftIcon ? 'pl-10' : '',
+              rightIcon ? 'pr-10' : '',
               className
             )}
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[#71717a]">
               {rightIcon}
             </div>
           )}
         </div>
-        {error && <p className="text-sm text-error">{error}</p>}
-        {hint && !error && <p className="text-sm text-text-muted">{hint}</p>}
+        {(error || helperText) && (
+          <p className={cn('mt-1.5 text-sm', error ? 'text-[#ef4444]' : 'text-[#71717a]')}>
+            {error || helperText}
+          </p>
+        )}
       </div>
     );
   }
 );
 
 Input.displayName = 'Input';
+
+export { Input };

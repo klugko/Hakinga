@@ -1,48 +1,30 @@
-import { forwardRef, type SelectHTMLAttributes } from 'react';
-import { cn } from '@/lib/utils';
+import { type SelectHTMLAttributes, forwardRef } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
 }
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'children'> {
   label?: string;
   error?: string;
-  hint?: string;
   options: SelectOption[];
   placeholder?: string;
-  fullWidth?: boolean;
 }
 
-/**
- * Select dropdown component
- */
-export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  (
-    {
-      className,
-      label,
-      error,
-      hint,
-      options,
-      placeholder,
-      fullWidth = true,
-      id,
-      ...props
-    },
-    ref
-  ) => {
-    const selectId = id || `select-${Math.random().toString(36).slice(2, 9)}`;
+const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ className, label, error, options, placeholder, id, ...props }, ref) => {
+    const selectId = id || label?.toLowerCase().replace(/\s/g, '-');
 
     return (
-      <div className={cn('flex flex-col gap-1.5', fullWidth && 'w-full')}>
+      <div className="w-full">
         {label && (
           <label
             htmlFor={selectId}
-            className="text-sm font-medium text-text-secondary"
+            className="block text-sm font-medium text-[#a1a1aa] mb-1.5"
           >
             {label}
           </label>
@@ -52,12 +34,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             id={selectId}
             className={cn(
-              'w-full h-10 px-4 py-2 pr-10 rounded-lg appearance-none',
-              'bg-surface border border-border text-text',
-              'transition-all duration-200',
-              'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20',
+              'w-full appearance-none bg-[#1a1a1a] border rounded-lg px-4 py-2.5 pr-10 text-white',
+              'transition-colors duration-200',
+              'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0f0f0f]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              error && 'border-error focus:border-error focus:ring-error/20',
+              error
+                ? 'border-[#ef4444] focus:ring-[#ef4444]'
+                : 'border-[#2a2a2a] focus:border-[#8b5cf6] focus:ring-[#8b5cf6]',
               className
             )}
             {...props}
@@ -72,18 +55,20 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 key={option.value}
                 value={option.value}
                 disabled={option.disabled}
+                className="bg-[#1a1a1a]"
               >
                 {option.label}
               </option>
             ))}
           </select>
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#71717a] pointer-events-none" />
         </div>
-        {error && <p className="text-sm text-error">{error}</p>}
-        {hint && !error && <p className="text-sm text-text-muted">{hint}</p>}
+        {error && <p className="mt-1.5 text-sm text-[#ef4444]">{error}</p>}
       </div>
     );
   }
 );
 
 Select.displayName = 'Select';
+
+export { Select };

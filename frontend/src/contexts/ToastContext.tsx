@@ -1,102 +1,63 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
-
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-export interface Toast {
-  id: string;
-  type: ToastType;
-  message: string;
-  duration?: number;
-}
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { ToastContainer } from '@/components/ui';
+import type { Toast } from '@/types';
 
 interface ToastContextType {
   toasts: Toast[];
-  addToast: (type: ToastType, message: string, duration?: number) => void;
+  addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
-  success: (message: string, duration?: number) => void;
-  error: (message: string, duration?: number) => void;
-  warning: (message: string, duration?: number) => void;
-  info: (message: string, duration?: number) => void;
+  success: (message: string) => void;
+  error: (message: string) => void;
+  warning: (message: string) => void;
+  info: (message: string) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastContext = createContext<ToastContextType | null>(null);
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
+}
 
 interface ToastProviderProps {
   children: ReactNode;
 }
 
-/**
- * Toast notification context provider
- */
 export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  const addToast = useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { ...toast, id }]);
   }, []);
 
-  const addToast = useCallback(
-    (type: ToastType, message: string, duration: number = 5000) => {
-      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-      const toast: Toast = { id, type, message, duration };
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
 
-      setToasts((prev) => [...prev, toast]);
+  const success = useCallback((message: string) => {
+    addToast({ type: 'success', message });
+  }, [addToast]);
 
-      if (duration > 0) {
-        setTimeout(() => {
-          removeToast(id);
-        }, duration);
-      }
-    },
-    [removeToast]
+  const error = useCallback((message: string) => {
+    addToast({ type: 'error', message });
+  }, [addToast]);
+
+  const warning = useCallback((message: string) => {
+    addToast({ type: 'warning', message });
+  }, [addToast]);
+
+  const info = useCallback((message: string) => {
+    addToast({ type: 'info', message });
+  }, [addToast]);
+
+  return (
+    <ToastContext.Provider value={{ toasts, addToast, removeToast, success, error, warning, info }}>
+      {children}
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </ToastContext.Provider>
   );
-
-  const success = useCallback(
-    (message: string, duration?: number) => addToast('success', message, duration),
-    [addToast]
-  );
-
-  const error = useCallback(
-    (message: string, duration?: number) => addToast('error', message, duration),
-    [addToast]
-  );
-
-  const warning = useCallback(
-    (message: string, duration?: number) => addToast('warning', message, duration),
-    [addToast]
-  );
-
-  const info = useCallback(
-    (message: string, duration?: number) => addToast('info', message, duration),
-    [addToast]
-  );
-
-  const value: ToastContextType = {
-    toasts,
-    addToast,
-    removeToast,
-    success,
-    error,
-    warning,
-    info,
-  };
-
-  return <ToastContext.Provider value={value}>{children}</ToastContext.Provider>;
-}
-
-/**
- * Hook to access toast context
- */
-export function useToast(): ToastContextType {
-  const context = useContext(ToastContext);
-  if (context === undefined) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
 }

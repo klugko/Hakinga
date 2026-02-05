@@ -1,192 +1,213 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Progress } from '@/components/ui/Progress';
-import { Badge } from '@/components/ui/Badge';
-import {
-  Trophy,
-  Target,
-  Clock,
-  AlertCircle,
-  RotateCcw,
-  Home,
-  Share2,
-  TrendingUp,
-  ArrowRight,
-} from 'lucide-react';
-import { formatDuration, formatAccuracy, getRankColor } from '@/lib/utils';
-import type { SessionResult, CharacterError } from '@/types';
+import { useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Trophy, Target, Clock, Keyboard, TrendingUp, RotateCcw, Home, RefreshCw } from 'lucide-react';
+import { Button, Card, Badge } from '@/components/ui';
+import { formatTime, cn } from '@/lib/utils';
+import type { WpmDataPoint } from '@/types';
 
 interface SessionResultsProps {
-  result: SessionResult;
-  onRestart?: () => void;
-  showRank?: boolean;
-  rank?: number;
-  showShare?: boolean;
+  wpm: number;
+  rawWpm: number;
+  accuracy: number;
+  errors: number;
+  duration: number;
+  totalCharacters: number;
+  wpmHistory: WpmDataPoint[];
+  onRetry: () => void;
+  onHome: () => void;
+  onNewText?: () => void;
+  personalBest?: number;
 }
 
-/**
- * Session results display component
- */
-export function SessionResults({
-  result,
-  onRestart,
-  showRank = false,
-  rank,
-  showShare = true,
+function SessionResults({
+  wpm,
+  rawWpm,
+  accuracy,
+  errors,
+  duration,
+  totalCharacters,
+  wpmHistory,
+  onRetry,
+  onHome,
+  onNewText,
+  personalBest,
 }: SessionResultsProps) {
-  const { wpm, accuracy, duration, errorsCount, correctChars, totalChars, errorsByChar } = result;
+  const isNewRecord = personalBest !== undefined && wpm > personalBest;
 
-  const getPerformanceLevel = () => {
-    if (wpm >= 80 && accuracy >= 0.95) return { label: 'Excellent', color: 'text-gold' };
-    if (wpm >= 60 && accuracy >= 0.9) return { label: 'Tres bien', color: 'text-success' };
-    if (wpm >= 40 && accuracy >= 0.85) return { label: 'Bien', color: 'text-accent' };
-    return { label: 'A ameliorer', color: 'text-warning' };
-  };
+  // Calculate rating based on WPM
+  const rating = useMemo(() => {
+    if (wpm >= 100) return { label: 'Expert', color: 'text-[#8b5cf6]', bg: 'bg-[#8b5cf6]/20' };
+    if (wpm >= 80) return { label: 'Advanced', color: 'text-[#22c55e]', bg: 'bg-[#22c55e]/20' };
+    if (wpm >= 60) return { label: 'Intermediate', color: 'text-[#3b82f6]', bg: 'bg-[#3b82f6]/20' };
+    if (wpm >= 40) return { label: 'Beginner', color: 'text-[#f59e0b]', bg: 'bg-[#f59e0b]/20' };
+    return { label: 'Learning', color: 'text-[#a1a1aa]', bg: 'bg-[#a1a1aa]/20' };
+  }, [wpm]);
 
-  const performance = getPerformanceLevel();
+  // Prepare chart data
+  const chartData = useMemo(() => {
+    if (wpmHistory.length === 0) return [];
+    return wpmHistory.map(point => ({
+      time: point.time,
+      wpm: point.wpm,
+      accuracy: point.accuracy,
+    }));
+  }, [wpmHistory]);
 
   return (
-    <div className="max-w-2xl mx-auto animate-slide-up">
+    <div className="max-w-4xl mx-auto p-4 animate-fadeIn">
+      {/* Header with main score */}
       <div className="text-center mb-8">
-        {showRank && rank && (
-          <div className="mb-4">
-            <span className={`text-6xl font-bold ${getRankColor(rank)}`}>#{rank}</span>
-            <p className="text-text-secondary mt-2">Position finale</p>
+        <h1 className="text-3xl font-bold text-white mb-2">Session Complete!</h1>
+        {isNewRecord && (
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#f59e0b]/20 rounded-full mb-4">
+            <Trophy className="w-5 h-5 text-[#f59e0b]" />
+            <span className="text-[#f59e0b] font-semibold">New Personal Best!</span>
           </div>
         )}
 
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
-          <Trophy className="w-5 h-5 text-primary" />
-          <span className={`font-semibold ${performance.color}`}>{performance.label}</span>
-        </div>
-
-        <h2 className="text-3xl font-bold text-text mb-2">Session terminee !</h2>
-        <p className="text-text-secondary">Voici vos resultats detailles</p>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/20 flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-primary" />
-            </div>
-            <p className="text-3xl font-bold text-primary">{Math.round(wpm)}</p>
-            <p className="text-sm text-text-muted">WPM</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-success/20 flex items-center justify-center">
-              <Target className="w-6 h-6 text-success" />
-            </div>
-            <p className="text-3xl font-bold text-success">{formatAccuracy(accuracy)}</p>
-            <p className="text-sm text-text-muted">Precision</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-accent/20 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-accent" />
-            </div>
-            <p className="text-3xl font-bold text-accent">{formatDuration(duration)}</p>
-            <p className="text-sm text-text-muted">Duree</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-error/20 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6 text-error" />
-            </div>
-            <p className="text-3xl font-bold text-error">{errorsCount}</p>
-            <p className="text-sm text-text-muted">Erreurs</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="mb-8">
-        <CardContent className="py-6">
-          <h3 className="font-semibold text-text mb-4">Resume</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-text-secondary">Caracteres corrects</span>
-              <span className="font-medium text-text">
-                {correctChars} / {totalChars}
-              </span>
-            </div>
-            <Progress
-              value={(correctChars / totalChars) * 100}
-              variant="success"
-              size="md"
-            />
-
-            {errorsByChar && errorsByChar.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-border">
-                <h4 className="text-sm font-medium text-text mb-3">
-                  Caracteres problematiques
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {errorsByChar.slice(0, 5).map((error: CharacterError) => (
-                    <Badge key={error.char} variant="error">
-                      "{error.char === ' ' ? 'espace' : error.char}" - {error.count} erreurs
-                    </Badge>
-                  ))}
-                </div>
-                {errorsByChar.length > 0 && (
-                  <p className="text-sm text-text-muted mt-3">
-                    Conseil : Pratiquez ces caracteres avec des exercices cibles
-                  </p>
-                )}
-              </div>
-            )}
+        <div className="flex flex-col items-center gap-2">
+          <div className="text-[80px] font-bold text-white leading-none">
+            {wpm}
           </div>
-        </CardContent>
+          <div className="text-xl text-[#a1a1aa]">WPM</div>
+          <Badge className={cn(rating.bg, rating.color)}>{rating.label}</Badge>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <Card variant="bordered" padding="md" className="text-center">
+          <Target className="w-6 h-6 text-[#22c55e] mx-auto mb-2" />
+          <div className="text-2xl font-bold text-white">{accuracy}%</div>
+          <div className="text-sm text-[#a1a1aa]">Accuracy</div>
+        </Card>
+
+        <Card variant="bordered" padding="md" className="text-center">
+          <Keyboard className="w-6 h-6 text-[#8b5cf6] mx-auto mb-2" />
+          <div className="text-2xl font-bold text-white">{rawWpm}</div>
+          <div className="text-sm text-[#a1a1aa]">Raw WPM</div>
+        </Card>
+
+        <Card variant="bordered" padding="md" className="text-center">
+          <Clock className="w-6 h-6 text-[#3b82f6] mx-auto mb-2" />
+          <div className="text-2xl font-bold text-white">{formatTime(duration)}</div>
+          <div className="text-sm text-[#a1a1aa]">Duration</div>
+        </Card>
+
+        <Card variant="bordered" padding="md" className="text-center">
+          <TrendingUp className="w-6 h-6 text-[#ef4444] mx-auto mb-2" />
+          <div className="text-2xl font-bold text-white">{errors}</div>
+          <div className="text-sm text-[#a1a1aa]">Errors</div>
+        </Card>
+      </div>
+
+      {/* WPM Chart */}
+      {chartData.length > 1 && (
+        <Card variant="bordered" padding="lg" className="mb-8">
+          <h3 className="text-lg font-semibold text-white mb-4">WPM Over Time</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
+                <XAxis
+                  dataKey="time"
+                  stroke="#71717a"
+                  fontSize={12}
+                  tickFormatter={(value) => `${value}s`}
+                />
+                <YAxis stroke="#71717a" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #2a2a2a',
+                    borderRadius: '8px',
+                  }}
+                  labelFormatter={(value) => `Time: ${value}s`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="wpm"
+                  stroke="#8b5cf6"
+                  strokeWidth={2}
+                  dot={{ fill: '#8b5cf6', strokeWidth: 0 }}
+                  activeDot={{ r: 6, fill: '#8b5cf6' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
+
+      {/* Additional Stats */}
+      <Card variant="bordered" padding="lg" className="mb-8">
+        <h3 className="text-lg font-semibold text-white mb-4">Details</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-sm text-[#a1a1aa]">Characters</div>
+            <div className="text-lg font-semibold text-white">{totalCharacters}</div>
+          </div>
+          <div>
+            <div className="text-sm text-[#a1a1aa]">Correct</div>
+            <div className="text-lg font-semibold text-[#22c55e]">{totalCharacters - errors}</div>
+          </div>
+          <div>
+            <div className="text-sm text-[#a1a1aa]">Errors</div>
+            <div className="text-lg font-semibold text-[#ef4444]">{errors}</div>
+          </div>
+          <div>
+            <div className="text-sm text-[#a1a1aa]">Speed</div>
+            <div className="text-lg font-semibold text-white">
+              {Math.round(totalCharacters / duration * 60)} CPM
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-[#a1a1aa]">Consistency</div>
+            <div className="text-lg font-semibold text-white">
+              {chartData.length > 1
+                ? `${Math.round((1 - (Math.max(...chartData.map(d => d.wpm)) - Math.min(...chartData.map(d => d.wpm))) / wpm) * 100)}%`
+                : '100%'}
+            </div>
+          </div>
+          {personalBest !== undefined && (
+            <div>
+              <div className="text-sm text-[#a1a1aa]">Personal Best</div>
+              <div className="text-lg font-semibold text-[#f59e0b]">{Math.max(wpm, personalBest)} WPM</div>
+            </div>
+          )}
+        </div>
       </Card>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        {onRestart && (
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <Button
+          variant="primary"
+          size="lg"
+          leftIcon={<RotateCcw className="w-5 h-5" />}
+          onClick={onRetry}
+        >
+          Try Again
+        </Button>
+        {onNewText && (
           <Button
-            variant="primary"
+            variant="secondary"
             size="lg"
-            fullWidth
-            leftIcon={<RotateCcw className="w-5 h-5" />}
-            onClick={onRestart}
+            leftIcon={<RefreshCw className="w-5 h-5" />}
+            onClick={onNewText}
           >
-            Refaire une session
+            New Quote
           </Button>
         )}
-        <Link to="/solo" className="flex-1">
-          <Button
-            variant="outline"
-            size="lg"
-            fullWidth
-            leftIcon={<ArrowRight className="w-5 h-5" />}
-          >
-            Nouveau texte
-          </Button>
-        </Link>
-        <Link to="/dashboard" className="flex-1">
-          <Button
-            variant="ghost"
-            size="lg"
-            fullWidth
-            leftIcon={<Home className="w-5 h-5" />}
-          >
-            Accueil
-          </Button>
-        </Link>
+        <Button
+          variant="ghost"
+          size="lg"
+          leftIcon={<Home className="w-5 h-5" />}
+          onClick={onHome}
+        >
+          Back to Practice
+        </Button>
       </div>
-
-      {showShare && (
-        <div className="mt-6 text-center">
-          <Button variant="ghost" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
-            Partager mes resultats
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
+
+export { SessionResults };

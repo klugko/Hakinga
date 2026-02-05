@@ -1,68 +1,33 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
-/**
- * Custom hook for syncing state with localStorage
- */
-export function useLocalStorage<T>(
-  key: string,
-  initialValue: T
-): [T, (value: T | ((prev: T) => T)) => void, () => void] {
-  const readValue = useCallback((): T => {
-    if (typeof window === 'undefined') {
+export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
+  // Get initial value from localStorage or use provided initial value
+  const [storedValue, setStoredValue] = useState<T>(() => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
     }
+  });
 
-    try {
-      const item = window.localStorage.getItem(key);
-      return item ? (JSON.parse(item) as T) : initialValue;
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
-    }
-  }, [initialValue, key]);
-
-  const [storedValue, setStoredValue] = useState<T>(readValue);
-
-  const setValue = useCallback(
-    (value: T | ((prev: T) => T)) => {
-      try {
-        const valueToStore = value instanceof Function ? value(storedValue) : value;
-        setStoredValue(valueToStore);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore));
-        }
-      } catch (error) {
-        console.warn(`Error setting localStorage key "${key}":`, error);
-      }
-    },
-    [key, storedValue]
-  );
-
-  const removeValue = useCallback(() => {
-    try {
-      setStoredValue(initialValue);
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(key);
-      }
-    } catch (error) {
-      console.warn(`Error removing localStorage key "${key}":`, error);
-    }
-  }, [initialValue, key]);
-
+  // Update localStorage when value changes
   useEffect(() => {
-    setStoredValue(readValue());
-  }, [readValue]);
+    try {
+      localStorage.setItem(key, JSON.stringify(storedValue));
+    } catch (error) {
+      console.error(`Error setting localStorage key "${key}":`, error);
+    }
+  }, [key, storedValue]);
 
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.key === key && event.newValue !== null) {
-        setStoredValue(JSON.parse(event.newValue));
-      }
-    };
+  // Wrapped setter that handles function updates
+  const setValue = useCallback((value: T | ((prev: T) => T)) => {
+    setStoredValue(prev => {
+      const newValue = value instanceof Function ? value(prev) : value;
+      return newValue;
+    });
+  }, []);
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [key]);
-
-  return [storedValue, setValue, removeValue];
+  return [storedValue, setValue];
 }

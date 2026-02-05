@@ -1,227 +1,326 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Gauge, Target, Clock, ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
+import { Layout } from '@/components/layout';
+import { TypingArea, Countdown, SessionResults, VirtualKeyboard } from '@/components/typing';
+import { Button, Card, Progress, Spinner } from '@/components/ui';
 import { useTypingSession } from '@/hooks/useTypingSession';
-import { TypingArea, TypingStatsBar } from '@/components/typing/TypingArea';
-import { SessionResults } from '@/components/typing/SessionResults';
-import { Button } from '@/components/ui/Button';
-import { Modal, ModalActions } from '@/components/ui/Modal';
-import { LoadingCard } from '@/components/ui/Spinner';
-import { useToast } from '@/contexts/ToastContext';
-import { ArrowLeft, X, RotateCcw } from 'lucide-react';
-import type { Difficulty, TextLength, TextCategory, SessionResult } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatTime } from '@/lib/utils';
+import { getRandomQuote } from '@/services/quoteService';
+import type { TypingSession, TypingText } from '@/types';
 
-const SAMPLE_TEXTS: Record<Difficulty, string[]> = {
-  easy: [
-    'Le chat dort sur le tapis. Il fait beau dehors. Les oiseaux chantent dans les arbres. La vie est belle quand on prend le temps de regarder autour de soi.',
-    'Je mange une pomme rouge. Elle est tres sucree. Les fruits sont bons pour la sante. Il faut en manger chaque jour pour rester en forme.',
-  ],
-  medium: [
-    'La programmation informatique est un art qui demande patience et precision. Chaque ligne de code contribue a la creation d\'applications qui facilitent notre quotidien.',
-    'L\'intelligence artificielle transforme notre monde a une vitesse incroyable. Les algorithmes apprennent et s\'adaptent, ouvrant de nouvelles possibilites chaque jour.',
-  ],
-  hard: [
-    'L\'implementation d\'algorithmes de machine learning necessites une comprehension approfondie des mathematiques statistiques et de l\'algebre lineaire vectorielle multidimensionnelle.',
-    'La cryptographie asymetrique utilise des paires de cles publiques et privees pour securiser les communications electroniques contre les interceptions malveillantes.',
-  ],
-};
+type SessionPhase = 'ready' | 'countdown' | 'typing' | 'completed';
 
-/**
- * Solo typing session page
- */
-export function SoloSessionPage() {
-  const [searchParams] = useSearchParams();
+function SoloSessionPage() {
   const navigate = useNavigate();
-  const { error: showError } = useToast();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
-  const difficulty = (searchParams.get('difficulty') as Difficulty) || 'medium';
-  const length = (searchParams.get('length') as TextLength) || 'medium';
-  const _category = searchParams.get('category') as TextCategory | null;
+  const difficulty = (searchParams.get('difficulty') || 'medium') as 'easy' | 'medium' | 'hard';
+  const length = (searchParams.get('length') || 'medium') as 'short' | 'medium' | 'long';
 
-  const [text, setText] = useState<string>('');
+  const [phase, setPhase] = useState<SessionPhase>('ready');
+  const [text, setText] = useState<TypingText | null>(null);
+  const [sessionResult, setSessionResult] = useState<Partial<TypingSession> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAbandonModal, setShowAbandonModal] = useState(false);
-  const [sessionResult, setSessionResult] = useState<SessionResult | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<{ key: string; isError: boolean } | null>(null);
 
+  // Load text on mount
   useEffect(() => {
-    const loadText = async () => {
+    let cancelled = false;
+
+    async function loadText() {
       setIsLoading(true);
+      setLoadError(null);
+
       try {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const texts = SAMPLE_TEXTS[difficulty];
-        const randomText = texts[Math.floor(Math.random() * texts.length)];
-
-        let finalText = randomText;
-        if (length === 'medium') {
-          finalText = randomText + ' ' + texts[(Math.floor(Math.random() * texts.length) + 1) % texts.length];
-        } else if (length === 'long') {
-          finalText = texts.join(' ') + ' ' + texts.join(' ');
+        const selectedText = await getRandomQuote(difficulty, length);
+        if (!cancelled) {
+          setText(selectedText);
         }
-
-        setText(finalText);
-      } catch {
-        showError('Erreur lors du chargement du texte');
-        navigate('/solo');
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError('Failed to load text. Please try again.');
+          console.error('Failed to load text:', error);
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
-    };
+    }
 
     loadText();
-  }, [difficulty, length, navigate, showError]);
 
-  const handleComplete = useCallback((result: {
-    wpm: number;
-    accuracy: number;
-    duration: number;
-    errorsCount: number;
-    correctChars: number;
-    totalChars: number;
-  }) => {
-    const sessionResult: SessionResult = {
-      wpm: result.wpm,
-      accuracy: result.accuracy,
-      duration: result.duration,
-      errorsCount: result.errorsCount,
-      correctChars: result.correctChars,
-      totalChars: result.totalChars,
-      wpmOverTime: [],
-      errorsByChar: [],
+    return () => {
+      cancelled = true;
     };
-    setSessionResult(sessionResult);
+  }, [difficulty, length]);
+
+  // Handle session completion
+  const handleComplete = useCallback((result: Partial<TypingSession>) => {
+    setSessionResult(result);
+    setPhase('completed');
   }, []);
 
+  // Typing session hook
   const {
-    charStates,
+    characters,
     currentIndex,
     isStarted,
-    isFinished,
-    currentWpm,
-    currentAccuracy,
-    progress,
-    duration,
-    errorsCount,
+    wpm,
+    accuracy,
+    elapsedTime,
     handleKeyDown,
+    start,
     reset,
+    progress,
+    lastKeyPress,
   } = useTypingSession({
-    text,
+    text: text?.content || '',
     onComplete: handleComplete,
   });
 
-  const handleRestart = () => {
-    setSessionResult(null);
-    reset();
+  // Handle keyboard events
+  useEffect(() => {
+    if (phase !== 'typing') return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (!isStarted && phase === 'typing') {
+        start();
+      }
+      handleKeyDown(e);
+    };
+
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [phase, isStarted, start, handleKeyDown]);
+
+  // Update visual keyboard state with auto-reset
+  useEffect(() => {
+    if (lastKeyPress) {
+      setActiveKey({ key: lastKeyPress.key, isError: lastKeyPress.isError });
+      const timer = setTimeout(() => setActiveKey(null), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [lastKeyPress]);
+
+  // Handle start button click
+  const handleStart = () => {
+    setPhase('countdown');
   };
 
-  const handleAbandon = () => {
-    setShowAbandonModal(false);
+  // Handle countdown complete
+  const handleCountdownComplete = () => {
+    setPhase('typing');
+    start();
+  };
+
+  // Handle retry
+  const handleRetry = () => {
+    reset();
+    setSessionResult(null);
+    setPhase('countdown');
+  };
+
+  // Handle new text
+  const handleNewText = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    reset();
+    setSessionResult(null);
+    setPhase('ready');
+
+    try {
+      const newText = await getRandomQuote(difficulty, length);
+      setText(newText);
+    } catch (error) {
+      setLoadError('Failed to load new text. Please try again.');
+      console.error('Failed to load text:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle back to practice selection
+  const handleBack = () => {
     navigate('/solo');
   };
 
-  if (isLoading) {
+  // Loading state
+  if (isLoading || !text) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingCard message="Chargement du texte..." />
-      </div>
+      <Layout showFooter={false}>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <Spinner size="lg" />
+          <p className="text-[#a1a1aa]">Loading inspiring quote...</p>
+        </div>
+      </Layout>
     );
   }
 
-  if (sessionResult) {
+  // Error state
+  if (loadError) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <SessionResults result={sessionResult} onRestart={handleRestart} />
-      </div>
+      <Layout showFooter={false}>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <AlertCircle className="w-12 h-12 text-red-500" />
+          <p className="text-[#a1a1aa]">{loadError}</p>
+          <Button
+            variant="primary"
+            leftIcon={<RefreshCw className="w-4 h-4" />}
+            onClick={() => {
+              setLoadError(null);
+              setIsLoading(true);
+              getRandomQuote(difficulty, length)
+                .then(setText)
+                .catch(() => setLoadError('Failed to load text. Please try again.'))
+                .finally(() => setIsLoading(false));
+            }}
+          >
+            Try Again
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Show results
+  if (phase === 'completed' && sessionResult) {
+    return (
+      <Layout showFooter={false}>
+        <SessionResults
+          wpm={sessionResult.wpm || 0}
+          rawWpm={sessionResult.rawWpm || 0}
+          accuracy={sessionResult.accuracy || 0}
+          errors={sessionResult.errors || 0}
+          duration={sessionResult.duration || 0}
+          totalCharacters={sessionResult.totalCharacters || 0}
+          wpmHistory={sessionResult.wpmHistory || []}
+          onRetry={handleRetry}
+          onHome={handleBack}
+          onNewText={handleNewText}
+          personalBest={user?.stats.bestWpm}
+        />
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="fixed top-0 left-0 right-0 z-40 bg-surface/80 backdrop-blur-lg border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14">
-            <Link
-              to="/solo"
-              className="flex items-center gap-2 text-text-secondary hover:text-text transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="hidden sm:inline">Retour</span>
-            </Link>
+    <Layout showFooter={false}>
+      {/* Countdown overlay */}
+      {phase === 'countdown' && <Countdown onComplete={handleCountdownComplete} />}
 
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<RotateCcw className="w-4 h-4" />}
-                onClick={handleRestart}
-                disabled={!isStarted}
-              >
-                <span className="hidden sm:inline">Recommencer</span>
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                leftIcon={<X className="w-4 h-4" />}
-                onClick={() => setShowAbandonModal(true)}
-              >
-                <span className="hidden sm:inline">Abandonner</span>
-              </Button>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button
+            variant="ghost"
+            leftIcon={<ArrowLeft className="w-4 h-4" />}
+            onClick={handleBack}
+          >
+            Back to Practice
+          </Button>
+
+          <div className="flex items-center gap-4 text-sm text-[#a1a1aa]">
+            <span className="capitalize">{difficulty}</span>
+            <span>/</span>
+            <span className="capitalize">{length}</span>
+            {text.category && (
+              <>
+                <span>/</span>
+                <span className="text-[#8b5cf6] italic max-w-[200px] truncate" title={text.category}>
+                  {text.category}
+                </span>
+              </>
+            )}
           </div>
         </div>
-      </header>
 
-      <main className="pt-20 pb-8 px-4">
-        <div className="max-w-4xl mx-auto">
-          {!isStarted && (
-            <div className="text-center mb-8 animate-fade-in">
-              <h2 className="text-xl font-semibold text-text mb-2">
-                Pret a commencer ?
-              </h2>
-              <p className="text-text-secondary">
-                Commencez a taper pour demarrer le chronometre
-              </p>
-            </div>
-          )}
+        {/* Stats bar - shown during typing */}
+        {phase === 'typing' && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <Card variant="bordered" padding="sm" className="text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Gauge className="w-4 h-4 text-[#8b5cf6]" />
+                <span className="text-2xl font-bold text-white">{wpm}</span>
+              </div>
+              <p className="text-xs text-[#71717a]">WPM</p>
+            </Card>
 
+            <Card variant="bordered" padding="sm" className="text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Target className="w-4 h-4 text-[#22c55e]" />
+                <span className="text-2xl font-bold text-white">{accuracy}%</span>
+              </div>
+              <p className="text-xs text-[#71717a]">Accuracy</p>
+            </Card>
+
+            <Card variant="bordered" padding="sm" className="text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Clock className="w-4 h-4 text-[#3b82f6]" />
+                <span className="text-2xl font-bold text-white">{formatTime(elapsedTime)}</span>
+              </div>
+              <p className="text-xs text-[#71717a]">Time</p>
+            </Card>
+          </div>
+        )}
+
+        {/* Progress bar - shown during typing */}
+        {phase === 'typing' && (
           <div className="mb-6">
-            <TypingStatsBar
-              wpm={currentWpm}
-              accuracy={currentAccuracy}
-              progress={progress}
-              duration={duration}
-              errorsCount={errorsCount}
-            />
-          </div>
-
-          <TypingArea
-            charStates={charStates}
-            currentIndex={currentIndex}
-            onKeyDown={handleKeyDown}
-            disabled={isFinished}
-          />
-
-          {!isStarted && (
-            <p className="text-center text-sm text-text-muted mt-4">
-              Astuce : Gardez vos doigts sur les touches de base (ASDF JKL;)
+            <Progress value={progress} size="sm" />
+            <p className="text-xs text-[#71717a] mt-1 text-right">
+              {currentIndex} / {text.content.length} characters
             </p>
-          )}
-        </div>
-      </main>
+          </div>
+        )}
 
-      <Modal
-        isOpen={showAbandonModal}
-        onClose={() => setShowAbandonModal(false)}
-        title="Abandonner la session ?"
-        description="Votre progression ne sera pas sauvegardee."
-      >
-        <ModalActions>
-          <Button variant="ghost" onClick={() => setShowAbandonModal(false)}>
-            Continuer
-          </Button>
-          <Button variant="danger" onClick={handleAbandon}>
-            Abandonner
-          </Button>
-        </ModalActions>
-      </Modal>
-    </div>
+        {/* Typing area */}
+        <TypingArea
+          characters={characters}
+          currentIndex={currentIndex}
+          isActive={phase === 'typing'}
+          onFocus={() => {
+            if (phase === 'ready') {
+              handleStart();
+            }
+          }}
+          className="mb-4"
+        />
+
+        {/* Virtual keyboard */}
+        {phase === 'typing' && (
+          <VirtualKeyboard
+            pressedKey={activeKey?.key || null}
+            isError={activeKey?.isError || false}
+            className="mb-4"
+          />
+        )}
+
+        {/* Ready state */}
+        {phase === 'ready' && (
+          <div className="text-center">
+            <p className="text-[#a1a1aa] mb-4">
+              Click on the text area or press any key to start
+            </p>
+            <Button variant="primary" size="lg" onClick={handleStart}>
+              Start Typing
+            </Button>
+          </div>
+        )}
+
+        {/* Typing hints */}
+        {phase === 'typing' && (
+          <p className="text-center text-sm text-[#71717a]">
+            Press <kbd className="px-1.5 py-0.5 bg-[#1a1a1a] rounded text-xs">Backspace</kbd> to correct mistakes
+          </p>
+        )}
+      </div>
+    </Layout>
   );
 }
+
+export { SoloSessionPage };

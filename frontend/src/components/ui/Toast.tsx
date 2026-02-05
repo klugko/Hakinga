@@ -1,65 +1,60 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { X, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useToast, type Toast as ToastType } from '@/contexts/ToastContext';
-import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import type { Toast as ToastType } from '@/types';
 
-const icons = {
-  success: CheckCircle,
-  error: AlertCircle,
-  warning: AlertTriangle,
-  info: Info,
-};
-
-const styles = {
-  success: 'border-success/30 bg-success/10',
-  error: 'border-error/30 bg-error/10',
-  warning: 'border-warning/30 bg-warning/10',
-  info: 'border-accent/30 bg-accent/10',
-};
-
-const iconStyles = {
-  success: 'text-success',
-  error: 'text-error',
-  warning: 'text-warning',
-  info: 'text-accent',
-};
-
-interface ToastItemProps {
-  toast: ToastType;
-  onRemove: (id: string) => void;
+export interface ToastProps extends ToastType {
+  onClose: (id: string) => void;
 }
 
-/**
- * Individual toast notification item
- */
-function ToastItem({ toast, onRemove }: ToastItemProps) {
-  const Icon = icons[toast.type];
+function Toast({ id, type, message, duration = 5000, onClose }: ToastProps) {
+  const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
-    if (toast.duration && toast.duration > 0) {
-      const timer = setTimeout(() => {
-        onRemove(toast.id);
-      }, toast.duration);
-      return () => clearTimeout(timer);
-    }
-  }, [toast, onRemove]);
+    const timer = setTimeout(() => {
+      setIsExiting(true);
+      setTimeout(() => onClose(id), 300);
+    }, duration);
+
+    return () => clearTimeout(timer);
+  }, [id, duration, onClose]);
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => onClose(id), 300);
+  };
+
+  const icons = {
+    success: <CheckCircle className="w-5 h-5 text-[#22c55e]" />,
+    error: <XCircle className="w-5 h-5 text-[#ef4444]" />,
+    warning: <AlertTriangle className="w-5 h-5 text-[#f59e0b]" />,
+    info: <Info className="w-5 h-5 text-[#3b82f6]" />,
+  };
+
+  const borderColors = {
+    success: 'border-l-[#22c55e]',
+    error: 'border-l-[#ef4444]',
+    warning: 'border-l-[#f59e0b]',
+    info: 'border-l-[#3b82f6]',
+  };
 
   return (
     <div
       className={cn(
-        'flex items-start gap-3 p-4 rounded-lg border shadow-lg backdrop-blur-sm',
-        'animate-slide-up',
-        styles[toast.type]
+        'flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#2a2a2a] border-l-4 rounded-lg shadow-lg',
+        'transition-all duration-300',
+        borderColors[type],
+        isExiting ? 'opacity-0 translate-x-full' : 'opacity-100 translate-x-0'
       )}
       role="alert"
     >
-      <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', iconStyles[toast.type])} />
-      <p className="flex-1 text-sm text-text">{toast.message}</p>
+      {icons[type]}
+      <p className="flex-1 text-sm text-white">{message}</p>
       <button
-        onClick={() => onRemove(toast.id)}
-        className="shrink-0 text-text-muted hover:text-text transition-colors"
-        aria-label="Fermer"
+        onClick={handleClose}
+        className="p-1 rounded text-[#71717a] hover:text-white hover:bg-[#252525] transition-colors"
+        aria-label="Close notification"
       >
         <X className="w-4 h-4" />
       </button>
@@ -67,22 +62,22 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
   );
 }
 
-/**
- * Toast container that renders all active toasts
- */
-export function ToastContainer() {
-  const { toasts, removeToast } = useToast();
+export interface ToastContainerProps {
+  toasts: ToastType[];
+  onClose: (id: string) => void;
+}
 
+function ToastContainer({ toasts, onClose }: ToastContainerProps) {
   if (toasts.length === 0) return null;
 
   return createPortal(
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
       {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
-          <ToastItem toast={toast} onRemove={removeToast} />
-        </div>
+        <Toast key={toast.id} {...toast} onClose={onClose} />
       ))}
     </div>,
     document.body
   );
 }
+
+export { Toast, ToastContainer };

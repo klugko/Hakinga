@@ -1,134 +1,62 @@
-import { Link } from 'react-router-dom';
 import { Keyboard, Github, Twitter } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
-/**
- * Footer component with links and social
- */
-export function Footer() {
-  const currentYear = new Date().getFullYear();
-
+function Footer() {
   return (
-    <footer className="bg-surface border-t border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="flex items-center gap-2 text-xl font-bold text-text">
-              <Keyboard className="w-6 h-6 text-primary" />
-              <span>Hakinga</span>
-            </Link>
-            <p className="mt-4 text-sm text-text-secondary max-w-md">
-              Plateforme intelligente d'entrainement a la dactylographie. Ameliorez votre vitesse et
-              votre precision grace au Machine Learning et a la competition en temps reel.
-            </p>
-            <div className="flex items-center gap-4 mt-6">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-text-muted hover:text-text transition-colors"
-                aria-label="GitHub"
-              >
-                <Github className="w-5 h-5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-text-muted hover:text-text transition-colors"
-                aria-label="Twitter"
-              >
-                <Twitter className="w-5 h-5" />
-              </a>
+    <footer className="bg-[#0f0f0f] border-t border-[#2a2a2a] py-8 mt-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] rounded flex items-center justify-center">
+              <Keyboard className="w-4 h-4 text-white" />
             </div>
+            <span className="text-sm font-semibold text-white">Hakinga</span>
+            <span className="text-xs text-[#71717a]">v1.0.0</span>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">
-              Fonctionnalites
-            </h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  to="/solo"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Pratique Solo
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/competition"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Competition
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/leaderboard"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Classement
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/typing-profile"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Analyse ML
-                </Link>
-              </li>
-            </ul>
+          {/* Links */}
+          <div className="flex items-center gap-6 text-sm text-[#a1a1aa]">
+            <Link to="/about" className="hover:text-white transition-colors">
+              About
+            </Link>
+            <Link to="/privacy" className="hover:text-white transition-colors">
+              Privacy
+            </Link>
+            <Link to="/terms" className="hover:text-white transition-colors">
+              Terms
+            </Link>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold text-text uppercase tracking-wider mb-4">
-              Support
-            </h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  to="/help"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Aide
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/faq"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/privacy"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Confidentialite
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/terms"
-                  className="text-sm text-text-secondary hover:text-text transition-colors"
-                >
-                  Conditions d'utilisation
-                </Link>
-              </li>
-            </ul>
+          {/* Social Links */}
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg text-[#71717a] hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            >
+              <Github className="w-5 h-5" />
+            </a>
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg text-[#71717a] hover:text-white hover:bg-[#1a1a1a] transition-colors"
+            >
+              <Twitter className="w-5 h-5" />
+            </a>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-text-muted text-center">
-            {currentYear} Hakinga. Tous droits reserves.
+        <div className="mt-6 pt-6 border-t border-[#2a2a2a] text-center">
+          <p className="text-xs text-[#71717a]">
+            &copy; {new Date().getFullYear()} Hakinga. All rights reserved.
           </p>
         </div>
       </div>
     </footer>
   );
 }
+
+export { Footer };

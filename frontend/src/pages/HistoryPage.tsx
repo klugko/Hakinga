@@ -1,228 +1,300 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Select } from '@/components/ui/Select';
-import {
-  Clock,
-  Keyboard,
-  Zap,
-  Users,
-  Filter,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import type { Difficulty } from '@/types';
+import { useState, useEffect, useMemo } from 'react';
+import { History, Filter, ArrowUpDown, Calendar, Gauge, Target, Clock, Loader2 } from 'lucide-react';
+import { Layout } from '@/components/layout';
+import { Card, Badge, Button, Select } from '@/components/ui';
+import { sessionService } from '@/services';
+import { formatDate, formatTime, formatRelativeTime } from '@/lib/utils';
+import type { HistoryFilter, TypingSession } from '@/types';
 
-interface SessionItem {
-  id: string;
-  type: 'solo' | 'public' | 'private';
-  wpm: number;
-  accuracy: number;
-  duration: number;
-  difficulty: Difficulty;
-  date: string;
-  rank?: number;
-}
-
-const mockSessions: SessionItem[] = [
-  { id: '1', type: 'solo', wpm: 75, accuracy: 96.1, duration: 120000, difficulty: 'medium', date: '2024-01-15T14:30:00' },
-  { id: '2', type: 'public', wpm: 68, accuracy: 93.8, duration: 95000, difficulty: 'medium', date: '2024-01-14T18:45:00', rank: 2 },
-  { id: '3', type: 'solo', wpm: 72, accuracy: 95.2, duration: 180000, difficulty: 'hard', date: '2024-01-14T10:15:00' },
-  { id: '4', type: 'private', wpm: 70, accuracy: 94.5, duration: 110000, difficulty: 'medium', date: '2024-01-13T20:00:00', rank: 1 },
-  { id: '5', type: 'solo', wpm: 65, accuracy: 92.3, duration: 150000, difficulty: 'easy', date: '2024-01-12T16:30:00' },
-  { id: '6', type: 'public', wpm: 71, accuracy: 94.8, duration: 100000, difficulty: 'medium', date: '2024-01-11T12:00:00', rank: 3 },
-  { id: '7', type: 'solo', wpm: 78, accuracy: 97.0, duration: 130000, difficulty: 'medium', date: '2024-01-10T09:00:00' },
-  { id: '8', type: 'solo', wpm: 69, accuracy: 93.5, duration: 140000, difficulty: 'hard', date: '2024-01-09T15:45:00' },
-];
-
-const getTypeIcon = (type: string) => {
-  if (type === 'solo') return <Keyboard className="w-5 h-5 text-primary" />;
-  if (type === 'public') return <Zap className="w-5 h-5 text-accent" />;
-  return <Users className="w-5 h-5 text-success" />;
-};
-
-const getTypeLabel = (type: string) => {
-  if (type === 'solo') return 'Solo';
-  if (type === 'public') return 'Publique';
-  return 'Privee';
-};
-
-const formatDuration = (ms: number) => {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
-
-/**
- * Session history page
- */
-export function HistoryPage() {
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [difficultyFilter, setDifficultyFilter] = useState<string>('all');
-  const [periodFilter, setPeriodFilter] = useState<string>('all');
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const filteredSessions = mockSessions.filter((session) => {
-    if (typeFilter !== 'all' && session.type !== typeFilter) return false;
-    if (difficultyFilter !== 'all' && session.difficulty !== difficultyFilter) return false;
-    return true;
+function HistoryPage() {
+  const [sessions, setSessions] = useState<TypingSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<HistoryFilter>({
+    mode: 'all',
+    dateRange: 'all',
+    sortBy: 'date',
+    sortOrder: 'desc',
   });
 
-  const pageSize = 5;
-  const totalPages = Math.ceil(filteredSessions.length / pageSize);
-  const paginatedSessions = filteredSessions.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
+  useEffect(() => {
+    const fetchSessions = async () => {
+      try {
+        setLoading(true);
+        const result = await sessionService.getSessionHistory({
+          limit: 50,
+          mode: filter.mode === 'all' ? undefined : filter.mode,
+        });
+        setSessions(result.sessions);
+      } catch (error) {
+        console.error('Failed to fetch sessions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessions();
+  }, [filter.mode]);
+
+  // Filter and sort sessions locally
+  const filteredSessions = useMemo(() => {
+    let result = [...sessions];
+
+    if (filter.dateRange !== 'all') {
+      const now = new Date();
+      const ranges = {
+        today: 1,
+        week: 7,
+        month: 30,
+      } as const;
+      const dateRange = filter.dateRange as keyof typeof ranges;
+      const days = ranges[dateRange];
+      const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+      result = result.filter(s => new Date(s.completedAt) >= cutoff);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (filter.sortBy) {
+        case 'date':
+          comparison = new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+          break;
+        case 'wpm':
+          comparison = b.wpm - a.wpm;
+          break;
+        case 'accuracy':
+          comparison = b.accuracy - a.accuracy;
+          break;
+      }
+      return filter.sortOrder === 'desc' ? comparison : -comparison;
+    });
+
+    return result;
+  }, [sessions, filter.dateRange, filter.sortBy, filter.sortOrder]);
+
+  // Calculate summary stats
+  const summaryStats = useMemo(() => {
+    if (filteredSessions.length === 0) {
+      return { avgWpm: 0, avgAccuracy: 0, totalTime: 0, count: 0 };
+    }
+
+    const totalWpm = filteredSessions.reduce((sum, s) => sum + s.wpm, 0);
+    const totalAccuracy = filteredSessions.reduce((sum, s) => sum + s.accuracy, 0);
+    const totalTime = filteredSessions.reduce((sum, s) => sum + s.duration, 0);
+
+    return {
+      avgWpm: Math.round(totalWpm / filteredSessions.length),
+      avgAccuracy: Math.round(totalAccuracy / filteredSessions.length),
+      totalTime,
+      count: filteredSessions.length,
+    };
+  }, [filteredSessions]);
+
+  const modeOptions = [
+    { value: 'all', label: 'All Modes' },
+    { value: 'solo', label: 'Solo' },
+    { value: 'private', label: 'Private' },
+    { value: 'competition', label: 'Competition' },
+  ];
+
+  const dateRangeOptions = [
+    { value: 'all', label: 'All Time' },
+    { value: 'today', label: 'Today' },
+    { value: 'week', label: 'This Week' },
+    { value: 'month', label: 'This Month' },
+  ];
+
+  const sortOptions = [
+    { value: 'date', label: 'Date' },
+    { value: 'wpm', label: 'WPM' },
+    { value: 'accuracy', label: 'Accuracy' },
+  ];
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-text">Historique des sessions</h1>
-        <p className="text-text-secondary mt-1">
-          Consultez et analysez vos performances passees
-        </p>
-      </div>
-
-      <Card className="mb-6">
-        <CardContent className="py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center gap-2 text-text-secondary">
-              <Filter className="w-4 h-4" />
-              <span className="text-sm font-medium">Filtres:</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4 flex-1">
-              <Select
-                options={[
-                  { value: 'all', label: 'Tous les types' },
-                  { value: 'solo', label: 'Solo' },
-                  { value: 'public', label: 'Publique' },
-                  { value: 'private', label: 'Privee' },
-                ]}
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-              />
-              <Select
-                options={[
-                  { value: 'all', label: 'Toutes difficultes' },
-                  { value: 'easy', label: 'Facile' },
-                  { value: 'medium', label: 'Moyen' },
-                  { value: 'hard', label: 'Difficile' },
-                ]}
-                value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
-              />
-              <Select
-                options={[
-                  { value: 'all', label: 'Toute periode' },
-                  { value: '7', label: '7 derniers jours' },
-                  { value: '30', label: '30 derniers jours' },
-                ]}
-                value={periodFilter}
-                onChange={(e) => setPeriodFilter(e.target.value)}
-              />
-            </div>
+    <Layout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+              <History className="w-8 h-8 text-[#8b5cf6]" />
+              Session History
+            </h1>
+            <p className="text-[#a1a1aa] mt-1">
+              Review your past typing sessions and track your progress
+            </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-primary" />
-            Sessions ({filteredSessions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {paginatedSessions.length > 0 ? (
-            <div className="space-y-3">
-              {paginatedSessions.map((session) => (
-                <Link
-                  key={session.id}
-                  to={`/session/${session.id}`}
-                  className="flex items-center justify-between p-4 rounded-lg bg-surface-hover hover:bg-surface-active transition-colors"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                      session.type === 'solo'
-                        ? 'bg-primary/10'
-                        : session.type === 'public'
-                        ? 'bg-accent/10'
-                        : 'bg-success/10'
-                    }`}>
-                      {getTypeIcon(session.type)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-text">{getTypeLabel(session.type)}</span>
-                        <Badge size="sm">{session.difficulty}</Badge>
-                        {session.rank && (
-                          <Badge
-                            variant={session.rank === 1 ? 'warning' : session.rank <= 3 ? 'success' : 'default'}
-                            size="sm"
-                          >
-                            #{session.rank}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-text-muted">{formatDate(session.date)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    <div className="text-right hidden sm:block">
-                      <p className="text-sm text-text-muted">Duree</p>
-                      <p className="font-medium text-text">{formatDuration(session.duration)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-primary">{session.wpm} WPM</p>
-                      <p className="text-sm text-text-muted">{session.accuracy}%</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Clock className="w-12 h-12 text-text-muted mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-text mb-2">Aucune session trouvee</h3>
-              <p className="text-text-secondary">
-                Essayez de modifier vos filtres ou commencez une nouvelle session
-              </p>
-            </div>
-          )}
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-text-muted">
-                Page {currentPage} sur {totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <Card variant="bordered" padding="md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-[#8b5cf6]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{summaryStats.count}</p>
+                <p className="text-xs text-[#a1a1aa]">Sessions</p>
               </div>
             </div>
+          </Card>
+
+          <Card variant="bordered" padding="md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#22c55e]/20 rounded-lg flex items-center justify-center">
+                <Gauge className="w-5 h-5 text-[#22c55e]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{summaryStats.avgWpm}</p>
+                <p className="text-xs text-[#a1a1aa]">Avg WPM</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="bordered" padding="md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#f59e0b]/20 rounded-lg flex items-center justify-center">
+                <Target className="w-5 h-5 text-[#f59e0b]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{summaryStats.avgAccuracy}%</p>
+                <p className="text-xs text-[#a1a1aa]">Avg Accuracy</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card variant="bordered" padding="md">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-[#3b82f6]/20 rounded-lg flex items-center justify-center">
+                <Clock className="w-5 h-5 text-[#3b82f6]" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-white">{formatTime(summaryStats.totalTime)}</p>
+                <p className="text-xs text-[#a1a1aa]">Total Time</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Filters */}
+        <Card variant="bordered" padding="md" className="mb-6">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 text-[#a1a1aa]">
+              <Filter className="w-4 h-4" />
+              <span className="text-sm font-medium">Filters:</span>
+            </div>
+
+            <Select
+              options={modeOptions}
+              value={filter.mode}
+              onChange={(e) => setFilter(prev => ({ ...prev, mode: e.target.value as HistoryFilter['mode'] }))}
+              className="w-36"
+            />
+
+            <Select
+              options={dateRangeOptions}
+              value={filter.dateRange}
+              onChange={(e) => setFilter(prev => ({ ...prev, dateRange: e.target.value as HistoryFilter['dateRange'] }))}
+              className="w-36"
+            />
+
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-sm text-[#a1a1aa]">Sort by:</span>
+              <Select
+                options={sortOptions}
+                value={filter.sortBy}
+                onChange={(e) => setFilter(prev => ({ ...prev, sortBy: e.target.value as HistoryFilter['sortBy'] }))}
+                className="w-28"
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilter(prev => ({ ...prev, sortOrder: prev.sortOrder === 'desc' ? 'asc' : 'desc' }))}
+              >
+                <ArrowUpDown className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* Sessions List */}
+        <Card variant="bordered" padding="none">
+          {loading ? (
+            <div className="p-8 flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
+            </div>
+          ) : filteredSessions.length === 0 ? (
+            <div className="p-8 text-center">
+              <History className="w-12 h-12 text-[#71717a] mx-auto mb-4" />
+              <p className="text-[#a1a1aa]">No sessions found matching your filters</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#2a2a2a]">
+              {filteredSessions.map((session) => (
+                <SessionRow key={session.id} session={session} />
+              ))}
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
+    </Layout>
+  );
+}
+
+function SessionRow({ session }: { session: TypingSession }) {
+  return (
+    <div className="p-4 hover:bg-[#1a1a1a]/50 transition-colors">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:block">
+            <div className="w-12 h-12 bg-[#252525] rounded-lg flex items-center justify-center">
+              <Gauge className="w-6 h-6 text-[#8b5cf6]" />
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-semibold text-white">{session.wpm} WPM</span>
+              <Badge
+                variant={
+                  session.mode === 'solo'
+                    ? 'primary'
+                    : session.mode === 'private'
+                    ? 'success'
+                    : 'warning'
+                }
+                size="sm"
+              >
+                {session.mode}
+              </Badge>
+            </div>
+            <p className="text-sm text-[#a1a1aa]">
+              {formatDate(session.completedAt)} ({formatRelativeTime(session.completedAt)})
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 text-sm">
+          <div className="text-center">
+            <p className="text-[#22c55e] font-medium">{session.accuracy}%</p>
+            <p className="text-xs text-[#71717a]">Accuracy</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[#ef4444] font-medium">{session.errors}</p>
+            <p className="text-xs text-[#71717a]">Errors</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[#3b82f6] font-medium">{formatTime(session.duration)}</p>
+            <p className="text-xs text-[#71717a]">Duration</p>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-medium">{session.totalCharacters}</p>
+            <p className="text-xs text-[#71717a]">Chars</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+
+export { HistoryPage };

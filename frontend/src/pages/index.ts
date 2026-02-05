@@ -1,16 +1,26 @@
+// Public pages
 export { LandingPage } from './LandingPage';
+
+// Auth pages
+export { LoginPage, RegisterPage, ForgotPasswordPage, ResetPasswordPage } from './auth';
+
+// Main pages
 export { DashboardPage } from './DashboardPage';
 export { ProfilePage } from './ProfilePage';
 export { SettingsPage } from './SettingsPage';
-export { LeaderboardPage } from './LeaderboardPage';
 export { HistoryPage } from './HistoryPage';
-export { FriendsPage } from './FriendsPage';
+export { LeaderboardPage } from './LeaderboardPage';
 export { AchievementsPage } from './AchievementsPage';
-export { TypingProfilePage } from './TypingProfilePage';
+export { FriendsPage } from './FriendsPage';
 export { TrainingPage } from './TrainingPage';
 export { TrainingSessionPage } from './TrainingSessionPage';
+export { TypingProfilePage } from './TypingProfilePage';
 
-export * from './auth';
-export * from './solo';
-export * from './competition';
-export * from './private';
+// Solo pages
+export { SoloPracticePage, SoloSessionPage } from './solo';
+
+// Private session pages
+export { CreatePrivateSessionPage, PrivateSessionLobbyPage } from './private';
+
+// Competition pages
+export { CompetitionPage, RacePage } from './competition';

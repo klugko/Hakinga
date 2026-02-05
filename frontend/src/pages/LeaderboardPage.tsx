@@ -1,201 +1,214 @@
-import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
-import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
+import { useState, useEffect } from 'react';
+import { Trophy, Medal, Crown, Gauge, Target, User, Loader2 } from 'lucide-react';
+import { Layout } from '@/components/layout';
+import { Card, Tabs, TabsList, TabsTrigger, TabsContent, Avatar, Badge } from '@/components/ui';
+import { leaderboardService } from '@/services';
 import { cn } from '@/lib/utils';
-import { Trophy, Medal, Crown, TrendingUp, Users } from 'lucide-react';
-import type { LeaderboardEntry, LeaderboardPeriod } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import type { LeaderboardEntry } from '@/types';
 
-const mockLeaderboard: LeaderboardEntry[] = [
-  { rank: 1, userId: '1', username: 'SpeedMaster', totalPoints: 12450, racesCount: 342, avgWpm: 125 },
-  { rank: 2, userId: '2', username: 'TypeNinja', totalPoints: 11200, racesCount: 298, avgWpm: 118 },
-  { rank: 3, userId: '3', username: 'KeyboardWizard', totalPoints: 10800, racesCount: 276, avgWpm: 112 },
-  { rank: 4, userId: '4', username: 'RapidTyper', totalPoints: 9500, racesCount: 245, avgWpm: 105 },
-  { rank: 5, userId: '5', username: 'FlashFingers', totalPoints: 8900, racesCount: 223, avgWpm: 102 },
-  { rank: 6, userId: '6', username: 'TurboKeys', totalPoints: 8200, racesCount: 198, avgWpm: 98 },
-  { rank: 7, userId: '7', username: 'SwiftTypist', totalPoints: 7600, racesCount: 187, avgWpm: 95 },
-  { rank: 8, userId: '8', username: 'QuickHands', totalPoints: 7100, racesCount: 172, avgWpm: 92 },
-  { rank: 9, userId: '9', username: 'ProTyper', totalPoints: 6500, racesCount: 156, avgWpm: 89 },
-  { rank: 10, userId: '10', username: 'KeyMaster', totalPoints: 6000, racesCount: 143, avgWpm: 86 },
-];
+function LeaderboardPage() {
+  const { user } = useAuth();
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('all');
 
-const getRankIcon = (rank: number) => {
-  if (rank === 1) return <Crown className="w-5 h-5 text-gold" />;
-  if (rank === 2) return <Medal className="w-5 h-5 text-silver" />;
-  if (rank === 3) return <Medal className="w-5 h-5 text-bronze" />;
-  return null;
-};
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        setLoading(true);
+        const [leaderboardData, rankData] = await Promise.all([
+          leaderboardService.getLeaderboard({ period, limit: 50 }),
+          leaderboardService.getMyRank(period),
+        ]);
+        setEntries(leaderboardData.entries);
+        setMyRank(rankData);
+      } catch (error) {
+        console.error('Failed to fetch leaderboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-const getRankStyle = (rank: number) => {
-  if (rank === 1) return 'bg-gold/10 border-gold/30';
-  if (rank === 2) return 'bg-silver/10 border-silver/30';
-  if (rank === 3) return 'bg-bronze/10 border-bronze/30';
-  return 'bg-surface-hover border-transparent';
-};
+    fetchLeaderboard();
+  }, [period]);
 
-interface LeaderboardTableProps {
-  entries: LeaderboardEntry[];
-  currentUserId?: string;
+  const handlePeriodChange = (newPeriod: string) => {
+    setPeriod(newPeriod);
+  };
+
+  return (
+    <Layout>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-[#f59e0b]/20 rounded-2xl mb-4">
+            <Trophy className="w-8 h-8 text-[#f59e0b]" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">Leaderboard</h1>
+          <p className="text-[#a1a1aa] mt-1">See how you rank against other typists</p>
+        </div>
+
+        {/* Time Range Tabs */}
+        <Tabs defaultValue="all" onChange={handlePeriodChange} className="mb-6">
+          <TabsList className="grid grid-cols-4">
+            <TabsTrigger value="all">All Time</TabsTrigger>
+            <TabsTrigger value="month">This Month</TabsTrigger>
+            <TabsTrigger value="week">This Week</TabsTrigger>
+            <TabsTrigger value="today">Today</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all">
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
+          </TabsContent>
+          <TabsContent value="month">
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
+          </TabsContent>
+          <TabsContent value="week">
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
+          </TabsContent>
+          <TabsContent value="today">
+            <LeaderboardList entries={entries} currentUserId={user?.id} loading={loading} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Your Rank Card */}
+        {user && myRank && (
+          <Card variant="bordered" padding="lg" className="mt-8">
+            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <User className="w-5 h-5 text-[#8b5cf6]" />
+              Your Position
+            </h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center font-bold text-[#8b5cf6]">
+                  #{myRank.rank}
+                </div>
+                <div>
+                  <p className="font-semibold text-white">{user.username}</p>
+                  <p className="text-sm text-[#a1a1aa]">{myRank.sessionsPlayed} sessions</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-white">{myRank.wpm} WPM</p>
+                <p className="text-sm text-[#a1a1aa]">{myRank.accuracy}% accuracy</p>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
+    </Layout>
+  );
 }
 
-function LeaderboardTable({ entries, currentUserId }: LeaderboardTableProps) {
+interface LeaderboardListProps {
+  entries: LeaderboardEntry[];
+  currentUserId?: string;
+  loading: boolean;
+}
+
+function LeaderboardList({ entries, currentUserId, loading }: LeaderboardListProps) {
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <Crown className="w-5 h-5 text-[#f59e0b]" />;
+      case 2:
+        return <Medal className="w-5 h-5 text-[#a1a1aa]" />;
+      case 3:
+        return <Medal className="w-5 h-5 text-[#b45309]" />;
+      default:
+        return <span className="w-5 text-center text-[#71717a] font-medium">{rank}</span>;
+    }
+  };
+
+  const getRankBg = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return 'bg-gradient-to-r from-[#f59e0b]/20 to-transparent border-l-4 border-l-[#f59e0b]';
+      case 2:
+        return 'bg-gradient-to-r from-[#a1a1aa]/10 to-transparent border-l-4 border-l-[#a1a1aa]';
+      case 3:
+        return 'bg-gradient-to-r from-[#b45309]/20 to-transparent border-l-4 border-l-[#b45309]';
+      default:
+        return '';
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card variant="bordered" padding="lg">
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-[#8b5cf6]" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <Card variant="bordered" padding="lg">
+        <div className="text-center py-8 text-[#71717a]">
+          No entries yet. Be the first to compete!
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <div className="space-y-2">
-      {entries.map((entry) => {
-        const isCurrentUser = entry.userId === currentUserId;
-        return (
+    <Card variant="bordered" padding="none">
+      <div className="divide-y divide-[#2a2a2a]">
+        {entries.map((entry) => (
           <div
             key={entry.userId}
             className={cn(
-              'flex items-center gap-4 p-4 rounded-lg border transition-colors',
-              getRankStyle(entry.rank),
-              isCurrentUser && 'ring-2 ring-primary'
+              'flex items-center gap-4 p-4 hover:bg-[#1a1a1a]/50 transition-colors',
+              getRankBg(entry.rank),
+              currentUserId === entry.userId && 'bg-[#8b5cf6]/10'
             )}
           >
-            <div className="w-12 text-center">
-              {getRankIcon(entry.rank) || (
-                <span className="text-lg font-bold text-text-muted">#{entry.rank}</span>
-              )}
+            {/* Rank */}
+            <div className="w-10 flex justify-center">
+              {getRankIcon(entry.rank)}
             </div>
 
-            <Avatar fallback={entry.username} size="md" />
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={cn('font-semibold truncate', isCurrentUser && 'text-primary')}>
+            {/* User Info */}
+            <div className="flex items-center gap-3 flex-1">
+              <Avatar name={entry.username} size="md" />
+              <div>
+                <p className={cn(
+                  'font-medium',
+                  currentUserId === entry.userId ? 'text-[#8b5cf6]' : 'text-white'
+                )}>
                   {entry.username}
-                </span>
-                {isCurrentUser && <Badge variant="primary" size="sm">Vous</Badge>}
+                  {currentUserId === entry.userId && (
+                    <Badge variant="primary" size="sm" className="ml-2">You</Badge>
+                  )}
+                </p>
+                <p className="text-sm text-[#71717a]">{entry.sessionsPlayed} sessions</p>
               </div>
-              <p className="text-sm text-text-muted">{entry.racesCount} courses</p>
             </div>
 
-            <div className="text-right">
-              <p className="font-bold text-text">{entry.totalPoints.toLocaleString()}</p>
-              <p className="text-sm text-text-muted">points</p>
-            </div>
-
-            <div className="text-right hidden sm:block">
-              <p className="font-semibold text-accent">{entry.avgWpm}</p>
-              <p className="text-sm text-text-muted">WPM moy.</p>
+            {/* Stats */}
+            <div className="flex items-center gap-6 text-sm">
+              <div className="text-center">
+                <p className="font-bold text-white text-lg">{entry.wpm}</p>
+                <p className="text-[#71717a] flex items-center gap-1">
+                  <Gauge className="w-3 h-3" /> WPM
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-[#22c55e] text-lg">{entry.accuracy}%</p>
+                <p className="text-[#71717a] flex items-center gap-1">
+                  <Target className="w-3 h-3" /> Acc
+                </p>
+              </div>
             </div>
           </div>
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * Leaderboard page showing rankings
- */
-export function LeaderboardPage() {
-  const { user } = useAuth();
-  const [period, setPeriod] = useState<LeaderboardPeriod>('all_time');
-
-  const userRank = 1247;
-
-  return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 mb-4">
-          <Trophy className="w-5 h-5 text-gold" />
-          <span className="text-gold font-medium">Classement</span>
-        </div>
-        <h1 className="text-3xl font-bold text-text mb-2">Meilleurs joueurs</h1>
-        <p className="text-text-secondary">
-          Comparez vos performances avec les meilleurs dactylographes
-        </p>
+        ))}
       </div>
-
-      {user && (
-        <Card className="mb-8 bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20">
-          <CardContent className="flex items-center justify-between py-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
-                <TrendingUp className="w-8 h-8 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-text-secondary">Votre position</p>
-                <p className="text-3xl font-bold text-text">#{userRank}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-text-secondary">Points totaux</p>
-              <p className="text-2xl font-bold text-primary">2,450</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Tabs defaultValue="global">
-        <TabsList className="mb-6">
-          <TabsTrigger value="global">
-            <Trophy className="w-4 h-4 mr-2" />
-            Global
-          </TabsTrigger>
-          <TabsTrigger value="friends">
-            <Users className="w-4 h-4 mr-2" />
-            Amis
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="global">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Top 100 Global</CardTitle>
-                <div className="flex gap-2">
-                  {(['all_time', 'monthly', 'weekly'] as LeaderboardPeriod[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPeriod(p)}
-                      className={cn(
-                        'px-3 py-1 text-sm rounded-md transition-colors',
-                        period === p
-                          ? 'bg-primary text-white'
-                          : 'text-text-secondary hover:bg-surface-hover'
-                      )}
-                    >
-                      {p === 'all_time' ? 'Tout' : p === 'monthly' ? 'Mois' : 'Semaine'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <LeaderboardTable entries={mockLeaderboard} currentUserId={user?.id} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="friends">
-          <Card>
-            <CardHeader>
-              <CardTitle>Classement Amis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {user ? (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 text-text-muted mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-text mb-2">Pas encore d'amis</h3>
-                  <p className="text-text-secondary">
-                    Ajoutez des amis pour voir ce classement
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-text-secondary">
-                    Connectez-vous pour voir le classement de vos amis
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+    </Card>
   );
 }
+
+export { LeaderboardPage };
