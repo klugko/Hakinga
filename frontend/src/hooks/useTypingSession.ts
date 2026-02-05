@@ -7,6 +7,12 @@ interface UseTypingSessionOptions {
   onComplete?: (session: Partial<TypingSession>) => void;
 }
 
+interface LastKeyPress {
+  key: string;
+  isError: boolean;
+  timestamp: number;
+}
+
 interface UseTypingSessionReturn {
   characters: CharacterState[];
   currentIndex: number;
@@ -23,6 +29,7 @@ interface UseTypingSessionReturn {
   start: () => void;
   reset: () => void;
   progress: number;
+  lastKeyPress: LastKeyPress | null;
 }
 
 export function useTypingSession({ text, onComplete }: UseTypingSessionOptions): UseTypingSessionReturn {
@@ -43,6 +50,7 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
   const [totalKeystrokes, setTotalKeystrokes] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [wpmHistory, setWpmHistory] = useState<WpmDataPoint[]>([]);
+  const [lastKeyPress, setLastKeyPress] = useState<LastKeyPress | null>(null);
 
   const startTimeRef = useRef<number | null>(null);
   const timerIntervalRef = useRef<number | null>(null);
@@ -93,7 +101,7 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
     e.preventDefault();
 
     if (e.key === 'Backspace') {
-      // Handle backspace
+      setLastKeyPress({ key: 'Backspace', isError: false, timestamp: Date.now() });
       if (currentIndex > 0) {
         setCurrentIndex(prev => prev - 1);
         setCharacters(prev => {
@@ -115,9 +123,14 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
       return;
     }
 
-    // Handle regular character input
     const expectedChar = text[currentIndex];
     const isCorrect = e.key === expectedChar;
+
+    setLastKeyPress({
+      key: e.key,
+      isError: !isCorrect,
+      timestamp: Date.now(),
+    });
 
     setTotalKeystrokes(prev => prev + 1);
 
@@ -220,6 +233,7 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
     setTotalKeystrokes(0);
     setElapsedTime(0);
     setWpmHistory([]);
+    setLastKeyPress(null);
     startTimeRef.current = null;
   }, [initializeCharacters]);
 
@@ -252,5 +266,6 @@ export function useTypingSession({ text, onComplete }: UseTypingSessionOptions):
     start,
     reset,
     progress,
+    lastKeyPress,
   };
 }

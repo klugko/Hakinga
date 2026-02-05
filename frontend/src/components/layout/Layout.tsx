@@ -12,7 +12,7 @@ function Layout({ children, showHeader = true, showFooter = true }: LayoutProps)
   return (
     <div className="min-h-screen bg-[#0f0f0f] flex flex-col">
       {showHeader && <Header />}
-      <main className="flex-1">
+      <main className={`flex-1 ${showHeader ? 'pt-20' : ''}`}>
         {children}
       </main>
       {showFooter && <Footer />}

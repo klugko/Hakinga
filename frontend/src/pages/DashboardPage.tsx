@@ -22,13 +22,25 @@ function DashboardPage() {
         setLoading(true);
         setError(null);
 
-        const [dashboardStats, userAchievements] = await Promise.all([
+        // Fetch dashboard stats and achievements separately to handle partial failures
+        const [dashboardResult, achievementsResult] = await Promise.allSettled([
           userService.getDashboardStats(),
           achievementService.getAchievements(),
         ]);
 
-        setStats(dashboardStats);
-        setAchievements(userAchievements);
+        if (dashboardResult.status === 'fulfilled') {
+          setStats(dashboardResult.value);
+        } else {
+          console.error('Failed to fetch dashboard stats:', dashboardResult.reason);
+          setError('Failed to load dashboard data. Please try again.');
+        }
+
+        if (achievementsResult.status === 'fulfilled') {
+          setAchievements(achievementsResult.value);
+        } else {
+          console.error('Failed to fetch achievements:', achievementsResult.reason);
+          // Don't set error for achievements, just show empty state
+        }
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
         setError('Failed to load dashboard data. Please try again.');

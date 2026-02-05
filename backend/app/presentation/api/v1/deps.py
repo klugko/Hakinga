@@ -95,11 +95,11 @@ def get_user_service(
 
 def get_session_service(
     session_repo: Annotated[PostgresSessionRepository, Depends(get_session_repository)],
-    text_repo: Annotated[PostgresTextRepository, Depends(get_text_repository)],
     user_repo: Annotated[PostgresUserRepository, Depends(get_user_repository)],
+    text_repo: Annotated[PostgresTextRepository, Depends(get_text_repository)],
 ) -> SessionService:
     """Get session service instance."""
-    return SessionService(session_repo, text_repo, user_repo)
+    return SessionService(session_repo, user_repo, text_repo)
 
 
 def get_text_service(
@@ -111,10 +111,9 @@ def get_text_service(
 
 def get_achievement_service(
     achievement_repo: Annotated[PostgresAchievementRepository, Depends(get_achievement_repository)],
-    user_repo: Annotated[PostgresUserRepository, Depends(get_user_repository)],
 ) -> AchievementService:
     """Get achievement service instance."""
-    return AchievementService(achievement_repo, user_repo)
+    return AchievementService(achievement_repo)
 
 
 def get_friend_service(
@@ -127,9 +126,10 @@ def get_friend_service(
 
 def get_leaderboard_service(
     leaderboard_repo: Annotated[PostgresLeaderboardRepository, Depends(get_leaderboard_repository)],
+    friend_repo: Annotated[PostgresFriendRepository, Depends(get_friend_repository)],
 ) -> LeaderboardService:
     """Get leaderboard service instance."""
-    return LeaderboardService(leaderboard_repo)
+    return LeaderboardService(leaderboard_repo, friend_repo)
 
 
 def get_settings_service(

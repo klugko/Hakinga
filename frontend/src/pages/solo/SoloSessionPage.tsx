@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Gauge, Target, Clock, ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { TypingArea, Countdown, SessionResults } from '@/components/typing';
+import { TypingArea, Countdown, SessionResults, VirtualKeyboard } from '@/components/typing';
 import { Button, Card, Progress, Spinner } from '@/components/ui';
 import { useTypingSession } from '@/hooks/useTypingSession';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +25,7 @@ function SoloSessionPage() {
   const [sessionResult, setSessionResult] = useState<Partial<TypingSession> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<{ key: string; isError: boolean } | null>(null);
 
   // Load text on mount
   useEffect(() => {
@@ -76,6 +77,7 @@ function SoloSessionPage() {
     start,
     reset,
     progress,
+    lastKeyPress,
   } = useTypingSession({
     text: text?.content || '',
     onComplete: handleComplete,
@@ -95,6 +97,15 @@ function SoloSessionPage() {
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [phase, isStarted, start, handleKeyDown]);
+
+  // Update visual keyboard state with auto-reset
+  useEffect(() => {
+    if (lastKeyPress) {
+      setActiveKey({ key: lastKeyPress.key, isError: lastKeyPress.isError });
+      const timer = setTimeout(() => setActiveKey(null), 150);
+      return () => clearTimeout(timer);
+    }
+  }, [lastKeyPress]);
 
   // Handle start button click
   const handleStart = () => {
@@ -277,8 +288,17 @@ function SoloSessionPage() {
               handleStart();
             }
           }}
-          className="mb-6 min-h-[250px]"
+          className="mb-4"
         />
+
+        {/* Virtual keyboard */}
+        {phase === 'typing' && (
+          <VirtualKeyboard
+            pressedKey={activeKey?.key || null}
+            isError={activeKey?.isError || false}
+            className="mb-4"
+          />
+        )}
 
         {/* Ready state */}
         {phase === 'ready' && (

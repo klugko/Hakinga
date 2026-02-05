@@ -90,36 +90,34 @@ async def get_session_history(
     mode: str | None = Query(None),
 ) -> ApiResponse[SessionHistoryResponse]:
     """Get the current user's session history."""
-    sessions, total = await session_service.get_user_sessions(
-        user_id=str(current_user.id),
+    result = await session_service.get_session_history(
+        user_id=current_user.id,
+        mode=mode,
         page=page,
         limit=limit,
-        mode=mode,
     )
-
-    pages = (total + limit - 1) // limit
 
     return ApiResponse(
         data=SessionHistoryResponse(
             sessions=[
                 SessionListResponse(
-                    id=str(s.id),
-                    text_id=str(s.text_id),
-                    wpm=s.wpm,
-                    raw_wpm=s.raw_wpm,
-                    accuracy=s.accuracy,
-                    errors=s.errors,
-                    total_characters=s.total_characters,
-                    duration=s.duration,
-                    mode=s.mode.value,
-                    started_at=s.started_at,
-                    completed_at=s.completed_at,
+                    id=s["id"],
+                    text_id=s["text_id"],
+                    wpm=s["wpm"],
+                    raw_wpm=s["raw_wpm"],
+                    accuracy=s["accuracy"],
+                    errors=s["errors"],
+                    total_characters=s["total_characters"],
+                    duration=s["duration"],
+                    mode=s["mode"],
+                    started_at=s["started_at"],
+                    completed_at=s["completed_at"],
                 )
-                for s in sessions
+                for s in result["sessions"]
             ],
-            total=total,
-            page=page,
-            pages=pages,
+            total=result["total"],
+            page=result["page"],
+            pages=result["pages"],
         )
     )
 
