@@ -6,8 +6,9 @@ FastAPI application setup with middleware, routes, and lifecycle management.
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.core.config import get_settings
 from app.core.logging import RequestLoggingMiddleware, setup_logging
@@ -63,6 +64,24 @@ def create_application() -> FastAPI:
 
 
 app = create_application()
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Global exception handler to ensure CORS headers on errors."""
+    origin = request.headers.get("origin", "")
+    headers = {}
+
+    # Add CORS headers if origin matches allowed origins
+    if origin in settings.cors_origins or "*" in settings.cors_origins:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+        headers=headers,
+    )
 
 
 @app.get("/health")
