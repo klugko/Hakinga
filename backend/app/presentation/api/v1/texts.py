@@ -47,32 +47,30 @@ async def list_texts(
     length: str | None = Query(None, regex="^(short|medium|long)$"),
 ) -> ApiResponse[TextListResponse]:
     """List all typing texts with optional filters."""
-    texts, total = await text_service.list_texts(
+    result = await text_service.list_texts(
         page=page,
         limit=limit,
         difficulty=difficulty,
         length=length,
     )
 
-    pages = (total + limit - 1) // limit
-
     return ApiResponse(
         data=TextListResponse(
             texts=[
                 TypingTextResponse(
-                    id=str(t.id),
-                    content=t.content,
-                    difficulty=t.difficulty.value,
-                    length=t.length.value,
-                    word_count=t.word_count,
-                    category=t.category,
-                    author=t.author,
+                    id=t["id"],
+                    content=t["content"],
+                    difficulty=t["difficulty"],
+                    length=t["length"],
+                    word_count=t["word_count"],
+                    category=t["category"],
+                    author=t["author"],
                 )
-                for t in texts
+                for t in result["texts"]
             ],
-            total=total,
-            page=page,
-            pages=pages,
+            total=result["total"],
+            page=result["page"],
+            pages=result["pages"],
         )
     )
 
