@@ -62,13 +62,28 @@ function PrivateSessionLobbyPage() {
   // Handle WebSocket messages
   const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
     switch (message.type) {
-      case 'player_joined':
+      case 'player_joined': {
+        // Map snake_case from backend to camelCase
+        const playerData = message.player as Record<string, unknown>;
+        const mappedPlayer: Player = {
+          id: playerData.id as string,
+          username: playerData.username as string,
+          avatar: (playerData.avatar as string) || undefined,
+          isHost: (playerData.is_host ?? playerData.isHost) as boolean,
+          isReady: (playerData.is_ready ?? playerData.isReady) as boolean,
+          progress: (playerData.progress as number) || 0,
+          wpm: (playerData.wpm as number) || 0,
+          accuracy: (playerData.accuracy as number) || 100,
+          position: playerData.position as number | undefined,
+          finishedAt: playerData.finished_at as string | undefined,
+        };
         setPlayers(prev => {
-          if (prev.find(p => p.id === message.player.id)) return prev;
-          info(`${message.player.username} joined the lobby`);
-          return [...prev, message.player];
+          if (prev.find(p => p.id === mappedPlayer.id)) return prev;
+          info(`${mappedPlayer.username} joined the lobby`);
+          return [...prev, mappedPlayer];
         });
         break;
+      }
 
       case 'player_left':
         setPlayers(prev => {
