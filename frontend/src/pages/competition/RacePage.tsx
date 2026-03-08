@@ -1,44 +1,77 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Trophy, Medal, Gauge, Target, Crown } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Trophy, Medal, Gauge, Target, Crown, Wifi, WifiOff } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { TypingArea, Countdown } from '@/components/typing';
+import { TypingArea } from '@/components/typing';
 import { Card, Progress, Avatar, Badge, Button } from '@/components/ui';
 import { useTypingSession } from '@/hooks/useTypingSession';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockTexts, mockPlayers, cn, formatTime } from '@/lib/utils';
-import type { Player, TypingSession } from '@/types';
+import { useToast } from '@/contexts/ToastContext';
+import { cn, formatTime } from '@/lib/utils';
+import type { TypingSession } from '@/types';
 
-type RacePhase = 'countdown' | 'racing' | 'finished';
+interface Player {
+  id: string;
+  username: string;
+  avatar: string | null;
+  progress: number;
+  wpm: number;
+  accuracy: number;
+  position: number | null;
+  finished_at: string | null;
+}
+
+interface LocationState {
+  sessionId: string;
+  textContent: string;
+  players: Player[];
+}
+
+type RacePhase = 'racing' | 'finished';
 
 function RacePage() {
   const navigate = useNavigate();
-  const { code } = useParams<{ code: string }>();
+  const location = useLocation();
   const { user } = useAuth();
+  const { info } = useToast();
+  const token = localStorage.getItem('hakinga_token');
 
-  const [phase, setPhase] = useState<RacePhase>('countdown');
-  const [text] = useState(() => mockTexts[4]); // Medium difficulty text
-  const [players, setPlayers] = useState<Player[]>(() => [
-    {
-      id: user?.id || '1',
-      username: user?.username || 'You',
-      isHost: true,
-      isReady: true,
-      progress: 0,
-      wpm: 0,
-      accuracy: 100,
-    },
-    ...mockPlayers.slice(1, 4).map(p => ({ ...p, progress: 0, wpm: 0, accuracy: 100 })),
-  ]);
+  // Get data from navigation state
+  const locationState = location.state as LocationState | null;
+  const [textContent] = useState(locationState?.textContent || '');
+  const [players, setPlayers] = useState<Player[]>(locationState?.players || []);
+  const [phase, setPhase] = useState<RacePhase>('racing');
+  const [isConnected, setIsConnected] = useState(true);
+  const [finalResults, setFinalResults] = useState<Player[] | null>(null);
+  const [pointsEarned, setPointsEarned] = useState(0);
+
+  const wsRef = useRef<WebSocket | null>(null);
+  const lastProgressRef = useRef({ progress: 0, wpm: 0, accuracy: 100 });
+
+  // Redirect if no session data
+  useEffect(() => {
+    if (!locationState) {
+      navigate('/competition');
+    }
+  }, [locationState, navigate]);
+
   // Handle session completion
   const handleComplete = useCallback((result: Partial<TypingSession>) => {
+    // Send finished message
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'finished',
+        wpm: result.wpm || 0,
+        accuracy: result.accuracy || 0,
+      }));
+    }
+
+    // Update own player progress
     setPlayers(prev => prev.map(p =>
       p.id === user?.id
-        ? { ...p, progress: 100, wpm: result.wpm || 0, accuracy: result.accuracy || 0, position: 1 }
+        ? { ...p, progress: 100, wpm: result.wpm || 0, accuracy: result.accuracy || 0 }
         : p
     ));
-    // Small delay before showing results
-    setTimeout(() => setPhase('finished'), 1000);
   }, [user?.id]);
 
   // Typing session hook
@@ -53,7 +86,7 @@ function RacePage() {
     start,
     progress,
   } = useTypingSession({
-    text: text.content,
+    text: textContent,
     onComplete: handleComplete,
   });
 
@@ -72,55 +105,123 @@ function RacePage() {
     return () => window.removeEventListener('keydown', handleKey);
   }, [phase, isStarted, start, handleKeyDown]);
 
-  // Update own progress
+  // Send progress updates
   useEffect(() => {
-    if (phase === 'racing') {
+    if (phase !== 'racing') return;
+
+    const last = lastProgressRef.current;
+
+    // Only send if there's significant change
+    if (Math.abs(progress - last.progress) >= 2 ||
+        Math.abs(wpm - last.wpm) >= 5 ||
+        Math.abs(accuracy - last.accuracy) >= 2) {
+
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'progress',
+          progress,
+          wpm,
+          accuracy,
+        }));
+      }
+
+      lastProgressRef.current = { progress, wpm, accuracy };
+
+      // Update own progress locally
       setPlayers(prev => prev.map(p =>
         p.id === user?.id
           ? { ...p, progress, wpm, accuracy }
           : p
       ));
     }
-  }, [progress, wpm, accuracy, user?.id, phase]);
+  }, [progress, wpm, accuracy, phase, user?.id]);
 
-  // Simulate other players' progress
+  // Handle WebSocket messages
+  const handleMessage = useCallback((event: MessageEvent) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      switch (data.type) {
+        case 'player_progress':
+          setPlayers(prev => prev.map(p =>
+            p.id === data.player_id
+              ? { ...p, progress: data.progress, wpm: data.wpm, accuracy: data.accuracy }
+              : p
+          ));
+          break;
+
+        case 'player_finished':
+          setPlayers(prev => prev.map(p =>
+            p.id === data.player_id
+              ? { ...p, progress: 100, wpm: data.wpm, accuracy: data.accuracy, position: data.position }
+              : p
+          ));
+          if (data.player_id === user?.id) {
+            setPointsEarned(data.points_earned || 0);
+          }
+          info(`A player finished in position ${data.position}!`);
+          break;
+
+        case 'race_ended':
+          setFinalResults(data.results);
+          setPhase('finished');
+          break;
+      }
+    } catch (e) {
+      console.error('Failed to parse message:', e);
+    }
+  }, [user?.id, info]);
+
+  // Connect to existing WebSocket (from matchmaking)
   useEffect(() => {
-    if (phase !== 'racing') return;
+    // The WebSocket should already be connected from CompetitionPage
+    // We need to reconnect with the same session
+    if (!token || !locationState?.sessionId) return;
 
-    const interval = setInterval(() => {
-      setPlayers(prev => prev.map(p => {
-        if (p.id === user?.id || p.progress >= 100) return p;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = import.meta.env.VITE_API_URL?.replace(/^https?:\/\//, '') || 'localhost:8000';
+    const wsUrl = `${protocol}//${host}/api/v1/public-sessions/queue?token=${token}`;
 
-        // Random progress increase based on "skill"
-        const baseSpeed = 0.5 + Math.random() * 1.5;
-        const newProgress = Math.min(100, p.progress + baseSpeed);
-        const newWpm = 60 + Math.floor(Math.random() * 40);
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
 
-        return {
-          ...p,
-          progress: newProgress,
-          wpm: newWpm,
-          accuracy: 90 + Math.floor(Math.random() * 10),
-        };
-      }));
-    }, 200);
+    ws.onopen = () => {
+      setIsConnected(true);
+    };
 
-    return () => clearInterval(interval);
-  }, [phase, user?.id]);
+    ws.onmessage = handleMessage;
 
-  // Sort players by progress
-  const sortedPlayers = [...players].sort((a, b) => b.progress - a.progress);
+    ws.onclose = () => {
+      setIsConnected(false);
+    };
 
-  // Handle countdown complete
-  const handleCountdownComplete = () => {
-    setPhase('racing');
-    start();
-  };
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    // Auto-start typing
+    setTimeout(() => {
+      start();
+    }, 500);
+
+    return () => {
+      ws.close();
+    };
+  }, [token, locationState?.sessionId, handleMessage, start]);
+
+  // Sort players by progress/position for display
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (a.position && b.position) return a.position - b.position;
+    if (a.position) return -1;
+    if (b.position) return 1;
+    return (b.progress || 0) - (a.progress || 0);
+  });
+
+  const myResult = players.find(p => p.id === user?.id);
 
   // Render finished state
   if (phase === 'finished') {
-    const rankedPlayers = sortedPlayers.map((p, i) => ({ ...p, position: i + 1 }));
-    const userResult = rankedPlayers.find(p => p.id === user?.id);
+    const rankedPlayers = finalResults || sortedPlayers.map((p, i) => ({ ...p, position: i + 1 }));
 
     return (
       <Layout showFooter={false}>
@@ -132,8 +233,13 @@ function RacePage() {
             </div>
             <h1 className="text-3xl font-bold text-white">Race Complete!</h1>
             <p className="text-[#a1a1aa] mt-1">
-              You finished in position #{userResult?.position || 1}
+              You finished in position #{myResult?.position || '-'}
             </p>
+            {pointsEarned > 0 && (
+              <p className="text-[#22c55e] text-xl font-bold mt-2">
+                +{pointsEarned} points earned!
+              </p>
+            )}
           </div>
 
           {/* Podium */}
@@ -203,7 +309,7 @@ function RacePage() {
                   </div>
                   <div className="flex items-center gap-4 text-sm">
                     <span className="text-white font-medium">{player.wpm} WPM</span>
-                    <span className="text-[#22c55e]">{player.accuracy}%</span>
+                    <span className="text-[#22c55e]">{player.accuracy?.toFixed(0)}%</span>
                   </div>
                 </div>
               ))}
@@ -212,11 +318,11 @@ function RacePage() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="primary" size="lg" onClick={() => navigate(`/private/lobby/${code}`)}>
-              Race Again
+            <Button variant="primary" size="lg" onClick={() => navigate('/competition')}>
+              Find New Race
             </Button>
-            <Button variant="secondary" size="lg" onClick={() => navigate('/private/create')}>
-              Back to Lobby
+            <Button variant="secondary" size="lg" onClick={() => navigate('/dashboard')}>
+              Back to Dashboard
             </Button>
           </div>
         </div>
@@ -226,12 +332,27 @@ function RacePage() {
 
   return (
     <Layout showFooter={false}>
-      {/* Countdown overlay */}
-      {phase === 'countdown' && <Countdown onComplete={handleCountdownComplete} />}
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold text-white">Public Race</h1>
+          </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className={cn(
+            'flex items-center gap-1.5 text-sm',
+            isConnected ? 'text-[#22c55e]' : 'text-[#ef4444]'
+          )}>
+            {isConnected ? (
+              <Wifi className="w-4 h-4" />
+            ) : (
+              <WifiOff className="w-4 h-4" />
+            )}
+          </div>
+        </div>
+
         {/* Race Progress */}
-        <Card variant="bordered" padding="md" className="mb-6">
+        <Card variant="bordered" padding="md" className="mb-4">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
             <Trophy className="w-5 h-5 text-[#f59e0b]" />
             Race Progress
@@ -243,7 +364,7 @@ function RacePage() {
                   'w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold',
                   index === 0 ? 'bg-[#f59e0b]/20 text-[#f59e0b]' : 'bg-[#2a2a2a] text-[#71717a]'
                 )}>
-                  {index + 1}
+                  {player.position || index + 1}
                 </span>
                 <Avatar name={player.username} size="sm" />
                 <span className={cn(
@@ -254,7 +375,7 @@ function RacePage() {
                 </span>
                 <div className="flex-1">
                   <Progress
-                    value={player.progress}
+                    value={player.progress || 0}
                     size="md"
                     variant={player.id === user?.id ? 'default' : 'success'}
                   />
@@ -266,7 +387,7 @@ function RacePage() {
         </Card>
 
         {/* Stats bar */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <Card variant="bordered" padding="sm" className="text-center">
             <div className="flex items-center justify-center gap-2">
               <Gauge className="w-4 h-4 text-[#8b5cf6]" />

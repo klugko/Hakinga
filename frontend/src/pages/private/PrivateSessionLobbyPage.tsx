@@ -1,61 +1,126 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, Copy, Check, Crown, ArrowLeft, Play, User } from 'lucide-react';
+import { Users, Copy, Check, Crown, ArrowLeft, Play, User, Loader2, Wifi, WifiOff } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button, Card, Avatar, Badge } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
-import { mockPlayers, cn } from '@/lib/utils';
+import { privateSessionService, PrivateSessionWebSocket } from '@/services';
+import { cn } from '@/lib/utils';
 import type { Player } from '@/types';
+import type { PrivateSession, WebSocketMessage } from '@/services/privateSessionService';
 
 function PrivateSessionLobbyPage() {
   const navigate = useNavigate();
   const { code } = useParams<{ code: string }>();
   const { user } = useAuth();
-  const { success, info } = useToast();
+  const token = localStorage.getItem('hakinga_token');
+  const { success, error: toastError, info } = useToast();
 
   const [copied, setCopied] = useState(false);
   const [isReady, setIsReady] = useState(false);
-  const [players, setPlayers] = useState<Player[]>([
-    {
-      id: user?.id || '1',
-      username: user?.username || 'You',
-      isHost: true,
-      isReady: false,
-      progress: 0,
-      wpm: 0,
-      accuracy: 100,
-    },
-  ]);
+  const [isTogglingReady, setIsTogglingReady] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [session, setSession] = useState<PrivateSession | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
-  // Simulate players joining
+  const wsRef = useRef<PrivateSessionWebSocket | null>(null);
+
+  // Fetch session data on mount
   useEffect(() => {
-    const timers: number[] = [];
+    if (!code) {
+      navigate('/private/create');
+      return;
+    }
 
-    // Add players over time
-    mockPlayers.slice(1).forEach((player, index) => {
-      const timer = window.setTimeout(() => {
+    const fetchSession = async () => {
+      try {
+        const sessionData = await privateSessionService.getSession(code);
+        setSession(sessionData);
+        setPlayers(sessionData.players);
+
+        // Check if current user is ready
+        const currentPlayer = sessionData.players.find(p => p.id === user?.id);
+        if (currentPlayer) {
+          setIsReady(currentPlayer.isReady || false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch session:', err);
+        toastError('Session not found or expired');
+        navigate('/private/create');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSession();
+  }, [code, user?.id, navigate, toastError]);
+
+  // Handle WebSocket messages
+  const handleWebSocketMessage = useCallback((message: WebSocketMessage) => {
+    switch (message.type) {
+      case 'player_joined':
         setPlayers(prev => {
-          if (prev.find(p => p.id === player.id)) return prev;
-          info(`${player.username} joined the lobby`);
-          return [...prev, { ...player, isHost: false }];
+          if (prev.find(p => p.id === message.player.id)) return prev;
+          info(`${message.player.username} joined the lobby`);
+          return [...prev, message.player];
         });
-      }, (index + 1) * 2000);
-      timers.push(timer);
-    });
+        break;
 
-    // Simulate other players becoming ready
-    const readyTimer = window.setTimeout(() => {
-      setPlayers(prev => prev.map(p =>
-        p.id !== user?.id && Math.random() > 0.3
-          ? { ...p, isReady: true }
-          : p
-      ));
-    }, 6000);
-    timers.push(readyTimer);
+      case 'player_left':
+        setPlayers(prev => {
+          const player = prev.find(p => p.id === message.player_id);
+          if (player) {
+            info(`${player.username} left the lobby`);
+          }
+          return prev.filter(p => p.id !== message.player_id);
+        });
+        break;
 
-    return () => timers.forEach(t => clearTimeout(t));
-  }, [user?.id, info]);
+      case 'player_ready':
+        setPlayers(prev => prev.map(p =>
+          p.id === message.player_id
+            ? { ...p, isReady: message.is_ready }
+            : p
+        ));
+        break;
+
+      case 'race_starting':
+        setCountdown(message.countdown);
+        break;
+
+      case 'race_started':
+        navigate(`/private/race/${code}`, {
+          state: { session, players }
+        });
+        break;
+
+      default:
+        break;
+    }
+  }, [code, info, navigate, session, players]);
+
+  // Connect WebSocket
+  useEffect(() => {
+    if (!code || !token || isLoading) return;
+
+    const ws = privateSessionService.createWebSocket(code, token);
+    wsRef.current = ws;
+
+    const unsubMessage = ws.onMessage(handleWebSocketMessage);
+    const unsubConnection = ws.onConnectionChange(setIsConnected);
+
+    ws.connect();
+
+    return () => {
+      unsubMessage();
+      unsubConnection();
+      ws.disconnect();
+    };
+  }, [code, token, isLoading, handleWebSocketMessage]);
 
   const handleCopyCode = async () => {
     await navigator.clipboard.writeText(code || '');
@@ -64,23 +129,59 @@ function PrivateSessionLobbyPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleToggleReady = () => {
-    setIsReady(!isReady);
-    setPlayers(prev => prev.map(p =>
-      p.id === user?.id ? { ...p, isReady: !isReady } : p
-    ));
+  const handleToggleReady = async () => {
+    if (!code) return;
+
+    setIsTogglingReady(true);
+    try {
+      const result = await privateSessionService.toggleReady(code);
+      setIsReady(result.isReady);
+      setPlayers(prev => prev.map(p =>
+        p.id === user?.id ? { ...p, isReady: result.isReady } : p
+      ));
+    } catch (err) {
+      console.error('Failed to toggle ready:', err);
+      toastError('Failed to update ready status');
+    } finally {
+      setIsTogglingReady(false);
+    }
   };
 
-  const handleStartRace = () => {
-    navigate(`/private/race/${code}`);
+  const handleStartRace = async () => {
+    if (!code) return;
+
+    setIsStarting(true);
+    try {
+      await privateSessionService.startRace(code);
+      // Navigation will happen via WebSocket 'race_started' event
+    } catch (err) {
+      console.error('Failed to start race:', err);
+      toastError('Failed to start the race');
+      setIsStarting(false);
+    }
   };
 
   const handleLeave = () => {
+    wsRef.current?.disconnect();
     navigate('/private/create');
   };
 
-  const allReady = players.every(p => p.isReady);
+  if (isLoading) {
+    return (
+      <Layout showFooter={false}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-[#22c55e] mx-auto mb-4" />
+            <p className="text-[#a1a1aa]">Loading lobby...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  const allReady = players.length >= 2 && players.every(p => p.isReady);
   const isHost = players.find(p => p.id === user?.id)?.isHost;
+  const maxPlayers = session?.maxPlayers || 4;
 
   return (
     <Layout showFooter={false}>
@@ -95,9 +196,28 @@ function PrivateSessionLobbyPage() {
             Leave Lobby
           </Button>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[#a1a1aa]">Session Code:</span>
+          <div className="flex items-center gap-4">
+            {/* Connection Status */}
+            <div className={cn(
+              'flex items-center gap-1.5 text-sm',
+              isConnected ? 'text-[#22c55e]' : 'text-[#ef4444]'
+            )}>
+              {isConnected ? (
+                <>
+                  <Wifi className="w-4 h-4" />
+                  <span>Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4" />
+                  <span>Reconnecting...</span>
+                </>
+              )}
+            </div>
+
+            {/* Session Code */}
             <div className="flex items-center gap-2 bg-[#1a1a1a] border border-[#2a2a2a] rounded-lg px-3 py-1.5">
+              <span className="text-[#a1a1aa] text-sm">Code:</span>
               <span className="font-mono text-lg tracking-widest text-white">{code}</span>
               <button
                 onClick={handleCopyCode}
@@ -109,6 +229,18 @@ function PrivateSessionLobbyPage() {
           </div>
         </div>
 
+        {/* Countdown Overlay */}
+        {countdown !== null && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div className="text-center">
+              <p className="text-2xl text-white mb-4">Race starting in...</p>
+              <div className="text-8xl font-bold text-[#22c55e] animate-pulse">
+                {countdown}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Content */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-[#22c55e]/20 rounded-2xl mb-4">
@@ -116,9 +248,18 @@ function PrivateSessionLobbyPage() {
           </div>
           <h1 className="text-3xl font-bold text-white">Waiting Room</h1>
           <p className="text-[#a1a1aa] mt-1">
-            {players.length} player{players.length > 1 ? 's' : ''} in lobby
+            {players.length} / {maxPlayers} player{players.length !== 1 ? 's' : ''} in lobby
           </p>
         </div>
+
+        {/* Session Info */}
+        {session && (
+          <div className="flex justify-center gap-4 mb-6">
+            <Badge variant="default">
+              Difficulty: {session.textDifficulty}
+            </Badge>
+          </div>
+        )}
 
         {/* Players List */}
         <Card variant="bordered" padding="lg" className="mb-6">
@@ -161,7 +302,7 @@ function PrivateSessionLobbyPage() {
             ))}
 
             {/* Empty slots */}
-            {Array.from({ length: 4 - players.length }).map((_, i) => (
+            {Array.from({ length: maxPlayers - players.length }).map((_, i) => (
               <div
                 key={`empty-${i}`}
                 className="flex items-center justify-center p-4 rounded-lg border border-dashed border-[#2a2a2a] text-[#71717a]"
@@ -179,19 +320,21 @@ function PrivateSessionLobbyPage() {
             variant={isReady ? 'secondary' : 'primary'}
             size="lg"
             onClick={handleToggleReady}
+            disabled={isTogglingReady}
+            leftIcon={isTogglingReady ? <Loader2 className="w-5 h-5 animate-spin" /> : undefined}
           >
-            {isReady ? 'Cancel Ready' : 'Ready Up'}
+            {isTogglingReady ? 'Updating...' : isReady ? 'Cancel Ready' : 'Ready Up'}
           </Button>
 
           {isHost && (
             <Button
               variant="primary"
               size="lg"
-              leftIcon={<Play className="w-5 h-5" />}
+              leftIcon={isStarting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
               onClick={handleStartRace}
-              disabled={!allReady || players.length < 2}
+              disabled={!allReady || players.length < 2 || isStarting}
             >
-              Start Race
+              {isStarting ? 'Starting...' : 'Start Race'}
             </Button>
           )}
         </div>

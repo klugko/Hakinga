@@ -20,7 +20,7 @@ export { TypingProfilePage } from './TypingProfilePage';
 export { SoloPracticePage, SoloSessionPage } from './solo';
 
 // Private session pages
-export { CreatePrivateSessionPage, PrivateSessionLobbyPage } from './private';
+export { CreatePrivateSessionPage, PrivateSessionLobbyPage, PrivateRacePage } from './private';
 
 // Competition pages
 export { CompetitionPage, RacePage } from './competition';

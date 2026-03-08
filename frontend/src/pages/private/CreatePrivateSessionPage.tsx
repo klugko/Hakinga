@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, Copy, Check, Play, Link as LinkIcon } from 'lucide-react';
+import { Users, Copy, Check, Play, Link as LinkIcon, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button, Card, Input, Select } from '@/components/ui';
 import { useToast } from '@/contexts/ToastContext';
-import { generateSessionCode } from '@/lib/utils';
+import { privateSessionService } from '@/services';
 
 function CreatePrivateSessionPage() {
   const navigate = useNavigate();
-  const { success } = useToast();
+  const { success, error: toastError } = useToast();
 
-  const [sessionCode] = useState(() => generateSessionCode());
   const [copied, setCopied] = useState(false);
   const [joinCode, setJoinCode] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [settings, setSettings] = useState({
     maxPlayers: '4',
     difficulty: 'medium',
@@ -20,19 +22,49 @@ function CreatePrivateSessionPage() {
   });
 
   const handleCopyCode = async () => {
-    await navigator.clipboard.writeText(sessionCode);
+    if (!createdCode) return;
+    await navigator.clipboard.writeText(createdCode);
     setCopied(true);
     success('Session code copied!');
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleCreateSession = () => {
-    navigate(`/private/lobby/${sessionCode}`);
+  const handleCreateSession = async () => {
+    setIsCreating(true);
+    try {
+      const session = await privateSessionService.createSession({
+        difficulty: settings.difficulty as 'easy' | 'medium' | 'hard',
+        length: settings.length as 'short' | 'medium' | 'long',
+        maxPlayers: parseInt(settings.maxPlayers),
+      });
+      setCreatedCode(session.code);
+      success('Session created! Share the code with your friends.');
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      toastError('Failed to create session. Please try again.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleJoinSession = () => {
-    if (joinCode.length === 6) {
+  const handleGoToLobby = () => {
+    if (createdCode) {
+      navigate(`/private/lobby/${createdCode}`);
+    }
+  };
+
+  const handleJoinSession = async () => {
+    if (joinCode.length !== 6) return;
+
+    setIsJoining(true);
+    try {
+      await privateSessionService.joinSession(joinCode);
       navigate(`/private/lobby/${joinCode}`);
+    } catch (err) {
+      console.error('Failed to join session:', err);
+      toastError('Failed to join session. Check the code and try again.');
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -55,74 +87,91 @@ function CreatePrivateSessionPage() {
           <Card variant="bordered" padding="lg">
             <h2 className="text-xl font-semibold text-white mb-6">Create New Session</h2>
 
-            {/* Session Code */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-[#a1a1aa] mb-2">
-                Your Session Code
-              </label>
-              <div className="flex gap-2">
-                <div className="flex-1 bg-[#0f0f0f] border border-[#2a2a2a] rounded-lg px-4 py-3 font-mono text-xl tracking-widest text-center text-white">
-                  {sessionCode}
+            {createdCode ? (
+              <>
+                {/* Session Code Display */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-[#a1a1aa] mb-2">
+                    Your Session Code
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-[#0f0f0f] border border-[#22c55e] rounded-lg px-4 py-3 font-mono text-xl tracking-widest text-center text-white">
+                      {createdCode}
+                    </div>
+                    <Button
+                      variant={copied ? 'primary' : 'secondary'}
+                      onClick={handleCopyCode}
+                      className="px-4"
+                    >
+                      {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-[#22c55e] mt-2">
+                    Share this code with friends to let them join
+                  </p>
                 </div>
+
                 <Button
-                  variant={copied ? 'primary' : 'secondary'}
-                  onClick={handleCopyCode}
-                  className="px-4"
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  leftIcon={<Play className="w-5 h-5" />}
+                  onClick={handleGoToLobby}
                 >
-                  {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  Go to Lobby
                 </Button>
-              </div>
-              <p className="text-xs text-[#71717a] mt-2">
-                Share this code with friends to let them join
-              </p>
-            </div>
+              </>
+            ) : (
+              <>
+                {/* Settings */}
+                <div className="space-y-4 mb-6">
+                  <Select
+                    label="Max Players"
+                    options={[
+                      { value: '2', label: '2 Players' },
+                      { value: '4', label: '4 Players' },
+                      { value: '6', label: '6 Players' },
+                      { value: '8', label: '8 Players' },
+                    ]}
+                    value={settings.maxPlayers}
+                    onChange={(e) => setSettings(prev => ({ ...prev, maxPlayers: e.target.value }))}
+                  />
 
-            {/* Settings */}
-            <div className="space-y-4 mb-6">
-              <Select
-                label="Max Players"
-                options={[
-                  { value: '2', label: '2 Players' },
-                  { value: '4', label: '4 Players' },
-                  { value: '6', label: '6 Players' },
-                  { value: '8', label: '8 Players' },
-                ]}
-                value={settings.maxPlayers}
-                onChange={(e) => setSettings(prev => ({ ...prev, maxPlayers: e.target.value }))}
-              />
+                  <Select
+                    label="Difficulty"
+                    options={[
+                      { value: 'easy', label: 'Easy - Common words' },
+                      { value: 'medium', label: 'Medium - Mixed vocabulary' },
+                      { value: 'hard', label: 'Hard - Complex text' },
+                    ]}
+                    value={settings.difficulty}
+                    onChange={(e) => setSettings(prev => ({ ...prev, difficulty: e.target.value }))}
+                  />
 
-              <Select
-                label="Difficulty"
-                options={[
-                  { value: 'easy', label: 'Easy - Common words' },
-                  { value: 'medium', label: 'Medium - Mixed vocabulary' },
-                  { value: 'hard', label: 'Hard - Complex text' },
-                ]}
-                value={settings.difficulty}
-                onChange={(e) => setSettings(prev => ({ ...prev, difficulty: e.target.value }))}
-              />
+                  <Select
+                    label="Text Length"
+                    options={[
+                      { value: 'short', label: 'Short (~25 words)' },
+                      { value: 'medium', label: 'Medium (~90 words)' },
+                      { value: 'long', label: 'Long (~180 words)' },
+                    ]}
+                    value={settings.length}
+                    onChange={(e) => setSettings(prev => ({ ...prev, length: e.target.value }))}
+                  />
+                </div>
 
-              <Select
-                label="Text Length"
-                options={[
-                  { value: 'short', label: 'Short (~25 words)' },
-                  { value: 'medium', label: 'Medium (~90 words)' },
-                  { value: 'long', label: 'Long (~180 words)' },
-                ]}
-                value={settings.length}
-                onChange={(e) => setSettings(prev => ({ ...prev, length: e.target.value }))}
-              />
-            </div>
-
-            <Button
-              variant="primary"
-              size="lg"
-              className="w-full"
-              leftIcon={<Play className="w-5 h-5" />}
-              onClick={handleCreateSession}
-            >
-              Create Session
-            </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="w-full"
+                  leftIcon={isCreating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5" />}
+                  onClick={handleCreateSession}
+                  disabled={isCreating}
+                >
+                  {isCreating ? 'Creating...' : 'Create Session'}
+                </Button>
+              </>
+            )}
           </Card>
 
           {/* Join Session */}
@@ -149,11 +198,11 @@ function CreatePrivateSessionPage() {
               variant="secondary"
               size="lg"
               className="w-full"
-              leftIcon={<Users className="w-5 h-5" />}
+              leftIcon={isJoining ? <Loader2 className="w-5 h-5 animate-spin" /> : <Users className="w-5 h-5" />}
               onClick={handleJoinSession}
-              disabled={joinCode.length !== 6}
+              disabled={joinCode.length !== 6 || isJoining}
             >
-              Join Session
+              {isJoining ? 'Joining...' : 'Join Session'}
             </Button>
 
             {/* How it works */}

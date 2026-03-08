@@ -6,26 +6,30 @@ import { TypingArea, Countdown, SessionResults, VirtualKeyboard } from '@/compon
 import { Button, Card, Progress, Spinner } from '@/components/ui';
 import { useTypingSession } from '@/hooks/useTypingSession';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { formatTime } from '@/lib/utils';
 import { getRandomQuote } from '@/services/quoteService';
-import type { TypingSession, TypingText } from '@/types';
+import { sessionService } from '@/services';
+import type { TypingSession, TypingText, SessionWithXP } from '@/types';
 
 type SessionPhase = 'ready' | 'countdown' | 'typing' | 'completed';
 
 function SoloSessionPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { success: toastSuccess, error: toastError } = useToast();
 
   const difficulty = (searchParams.get('difficulty') || 'medium') as 'easy' | 'medium' | 'hard';
   const length = (searchParams.get('length') || 'medium') as 'short' | 'medium' | 'long';
 
   const [phase, setPhase] = useState<SessionPhase>('ready');
   const [text, setText] = useState<TypingText | null>(null);
-  const [sessionResult, setSessionResult] = useState<Partial<TypingSession> | null>(null);
+  const [sessionResult, setSessionResult] = useState<SessionWithXP | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeKey, setActiveKey] = useState<{ key: string; isError: boolean } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Load text on mount
   useEffect(() => {
@@ -59,11 +63,57 @@ function SoloSessionPage() {
     };
   }, [difficulty, length]);
 
-  // Handle session completion
-  const handleComplete = useCallback((result: Partial<TypingSession>) => {
-    setSessionResult(result);
-    setPhase('completed');
-  }, []);
+  // Handle session completion - save to backend
+  const handleComplete = useCallback(async (result: Partial<TypingSession> & { maxCombo: number }) => {
+    if (!text || !user) {
+      setSessionResult(result as SessionWithXP);
+      setPhase('completed');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const savedSession = await sessionService.createSession({
+        textId: text.id,
+        text: text.content,
+        wpm: result.wpm || 0,
+        rawWpm: result.rawWpm || 0,
+        accuracy: result.accuracy || 0,
+        errors: result.errors || 0,
+        totalCharacters: result.totalCharacters || text.content.length,
+        correctCharacters: result.correctCharacters || 0,
+        duration: result.duration || 0,
+        wpmHistory: result.wpmHistory || [],
+        maxCombo: result.maxCombo || 0,
+        difficulty: difficulty,
+      });
+
+      setSessionResult(savedSession);
+
+      if (savedSession.leveledUp && savedSession.newLevel) {
+        toastSuccess(`Level Up! You are now level ${savedSession.newLevel}!`);
+      } else if (savedSession.xpEarned > 0) {
+        toastSuccess(`+${savedSession.xpEarned} XP earned!`);
+      }
+
+      // Refresh user data to update stats
+      refreshUser?.();
+    } catch (err) {
+      console.error('Failed to save session:', err);
+      // Still show results even if save failed
+      setSessionResult({
+        ...result,
+        maxCombo: result.maxCombo || 0,
+        xpEarned: 0,
+        leveledUp: false,
+        newStreak: 0,
+      } as SessionWithXP);
+      toastError('Session completed but failed to save to server');
+    } finally {
+      setIsSaving(false);
+      setPhase('completed');
+    }
+  }, [text, user, difficulty, toastSuccess, toastError, refreshUser]);
 
   // Typing session hook
   const {
@@ -187,6 +237,18 @@ function SoloSessionPage() {
     );
   }
 
+  // Show saving state
+  if (isSaving) {
+    return (
+      <Layout showFooter={false}>
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+          <Spinner size="lg" />
+          <p className="text-[#a1a1aa]">Saving your session...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   // Show results
   if (phase === 'completed' && sessionResult) {
     return (
@@ -203,6 +265,13 @@ function SoloSessionPage() {
           onHome={handleBack}
           onNewText={handleNewText}
           personalBest={user?.stats.bestWpm}
+          maxCombo={sessionResult.maxCombo}
+          xpEarned={sessionResult.xpEarned}
+          xpBreakdown={sessionResult.xpBreakdown}
+          levelInfo={sessionResult.levelInfo}
+          leveledUp={sessionResult.leveledUp}
+          newLevel={sessionResult.newLevel}
+          newStreak={sessionResult.newStreak}
         />
       </Layout>
     );

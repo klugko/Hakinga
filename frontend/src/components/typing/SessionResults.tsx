@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Trophy, Target, Clock, Keyboard, TrendingUp, RotateCcw, Home, RefreshCw } from 'lucide-react';
+import { Trophy, Target, Clock, Keyboard, TrendingUp, RotateCcw, Home, RefreshCw, Zap, Star, Flame } from 'lucide-react';
 import { Button, Card, Badge } from '@/components/ui';
+import { XPBar } from '@/components/progression';
 import { formatTime, cn } from '@/lib/utils';
-import type { WpmDataPoint } from '@/types';
+import type { WpmDataPoint, XPBreakdown, LevelInfo } from '@/types';
 
 interface SessionResultsProps {
   wpm: number;
@@ -17,6 +18,13 @@ interface SessionResultsProps {
   onHome: () => void;
   onNewText?: () => void;
   personalBest?: number;
+  maxCombo?: number;
+  xpEarned?: number;
+  xpBreakdown?: XPBreakdown;
+  levelInfo?: LevelInfo;
+  leveledUp?: boolean;
+  newLevel?: number;
+  newStreak?: number;
 }
 
 function SessionResults({
@@ -31,6 +39,13 @@ function SessionResults({
   onHome,
   onNewText,
   personalBest,
+  maxCombo,
+  xpEarned,
+  xpBreakdown,
+  levelInfo,
+  leveledUp,
+  newLevel,
+  newStreak,
 }: SessionResultsProps) {
   const isNewRecord = personalBest !== undefined && wpm > personalBest;
 
@@ -73,6 +88,79 @@ function SessionResults({
           <Badge className={cn(rating.bg, rating.color)}>{rating.label}</Badge>
         </div>
       </div>
+
+      {/* XP and Level Section */}
+      {(xpEarned !== undefined && xpEarned > 0) && (
+        <Card variant="bordered" padding="lg" className="mb-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-[#f59e0b]/20 rounded-xl flex items-center justify-center">
+                <Zap className="w-7 h-7 text-[#f59e0b]" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-[#f59e0b]">+{xpEarned} XP</div>
+                {leveledUp && newLevel && (
+                  <div className="text-sm text-[#22c55e] font-medium">
+                    Level Up! Now level {newLevel}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {levelInfo && (
+              <div className="flex-1 max-w-xs">
+                <XPBar
+                  levelInfo={levelInfo}
+                  showNumbers={true}
+                  showLevel={true}
+                  size="md"
+                  animated={true}
+                />
+              </div>
+            )}
+          </div>
+
+          {xpBreakdown && (
+            <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Star className="w-4 h-4 text-[#a1a1aa]" />
+                  <span className="text-[#a1a1aa]">Base:</span>
+                  <span className="text-white font-medium">+{xpBreakdown.baseXp}</span>
+                </div>
+                {xpBreakdown.streakBonus > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-[#f59e0b]" />
+                    <span className="text-[#a1a1aa]">Streak:</span>
+                    <span className="text-[#f59e0b] font-medium">+{xpBreakdown.streakBonus}</span>
+                  </div>
+                )}
+                {xpBreakdown.perfectAccuracyBonus > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-[#22c55e]" />
+                    <span className="text-[#a1a1aa]">Perfect:</span>
+                    <span className="text-[#22c55e] font-medium">+{xpBreakdown.perfectAccuracyBonus}</span>
+                  </div>
+                )}
+                {xpBreakdown.personalBestBonus > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-[#8b5cf6]" />
+                    <span className="text-[#a1a1aa]">PB:</span>
+                    <span className="text-[#8b5cf6] font-medium">+{xpBreakdown.personalBestBonus}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {newStreak !== undefined && newStreak > 1 && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-[#f59e0b]">
+              <Flame className="w-5 h-5" />
+              <span className="font-medium">{newStreak} day streak!</span>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -168,6 +256,12 @@ function SessionResults({
                 : '100%'}
             </div>
           </div>
+          {maxCombo !== undefined && maxCombo > 0 && (
+            <div>
+              <div className="text-sm text-[#a1a1aa]">Max Combo</div>
+              <div className="text-lg font-semibold text-[#f59e0b]">{maxCombo}x</div>
+            </div>
+          )}
           {personalBest !== undefined && (
             <div>
               <div className="text-sm text-[#a1a1aa]">Personal Best</div>

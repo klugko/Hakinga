@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Keyboard, Target, Gauge, Timer, Zap, ArrowRight } from 'lucide-react';
+import { Keyboard, Target, Gauge, Timer, Zap, ArrowRight, Code, Braces } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, Badge, Progress } from '@/components/ui';
 
@@ -81,6 +81,38 @@ const trainingModes: TrainingMode[] = [
     icon: Timer,
     color: '#6366f1',
     difficulty: 'advanced',
+  },
+  {
+    id: 'code-python',
+    title: 'Python Code',
+    description: 'Practice typing Python code snippets',
+    icon: Code,
+    color: '#3572A5',
+    difficulty: 'intermediate',
+  },
+  {
+    id: 'code-javascript',
+    title: 'JavaScript Code',
+    description: 'Practice typing JavaScript and TypeScript',
+    icon: Code,
+    color: '#f7df1e',
+    difficulty: 'intermediate',
+  },
+  {
+    id: 'code-java',
+    title: 'Java Code',
+    description: 'Practice typing Java class definitions',
+    icon: Code,
+    color: '#b07219',
+    difficulty: 'advanced',
+  },
+  {
+    id: 'code-symbols',
+    title: 'Code Symbols Drill',
+    description: 'Master { } [ ] ( ) < > symbols',
+    icon: Braces,
+    color: '#10b981',
+    difficulty: 'intermediate',
   },
 ];
 
