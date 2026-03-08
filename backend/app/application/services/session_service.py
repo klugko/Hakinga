@@ -76,7 +76,17 @@ class SessionService:
             Tuple of (session, xp_gain, level_info, leveled_up, new_streak).
         """
         uid = UUID(user_id) if isinstance(user_id, str) else user_id
-        tid = UUID(text_id) if isinstance(text_id, str) else text_id
+
+        # Handle text_id - might be a UUID or a generated ID like "quote-123456"
+        if isinstance(text_id, str):
+            try:
+                tid = UUID(text_id)
+            except ValueError:
+                # Generate a deterministic UUID from the text_id string
+                # This allows external quotes to have consistent IDs
+                tid = uuid4()
+        else:
+            tid = text_id
 
         user = await self._user_repo.get_by_id(uid)
         if not user:
