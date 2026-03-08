@@ -1,7 +1,12 @@
 # =============================================================================
-# Hakinga - Docker Compose Configuration
+# Hakinga - Docker Compose for VPS Deployment
 # =============================================================================
-# Development and production orchestration for all services
+# Full stack deployment: Frontend, Backend, PostgreSQL, Redis
+#
+# Usage:
+#   1. Copy .env.example to .env and configure values
+#   2. Run: docker compose up -d --build
+#   3. Access: http://localhost (frontend) / http://localhost:8000 (API)
 # =============================================================================
 
 services:
@@ -14,12 +19,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-hakinga}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hakinga_secret_2024}
       POSTGRES_DB: ${POSTGRES_DB:-hakinga}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hakinga} -d ${POSTGRES_DB:-hakinga}"]
       interval: 10s
@@ -30,13 +35,13 @@ services:
       - hakinga-network
 
   # ---------------------------------------------------------------------------
-  # Redis Cache (Optional)
+  # Redis Cache
   # ---------------------------------------------------------------------------
   redis:
     image: redis:7-alpine
     container_name: hakinga-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     ports:
@@ -58,45 +63,50 @@ services:
       dockerfile: Dockerfile
     container_name: hakinga-backend
     restart: unless-stopped
-    environment:
-      # Database
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-hakinga}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-hakinga}
-      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-5}
-      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-10}
-
-      # Security
-      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
-      ALGORITHM: ${ALGORITHM:-HS256}
-      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
-
-      # CORS
-      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173","http://localhost"]}
-
-      # App
-      DEBUG: ${DEBUG:-false}
-      APP_NAME: ${APP_NAME:-Hakinga API}
-      API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
-
-      # Redis
-      REDIS_URL: redis://redis:6379
-
-      # Email
-      EMAIL_HOST: ${EMAIL_HOST:-}
-      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
-      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
-      EMAIL_PORT: ${EMAIL_PORT:-587}
-      EMAIL_FROM: ${EMAIL_FROM:-noreply@hakinga.com}
-
-      # Migration control
-      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-hakinga}:${POSTGRES_PASSWORD:-hakinga_secret_2024}@db:5432/${POSTGRES_DB:-hakinga}
+      DATABASE_POOL_SIZE: ${DATABASE_POOL_SIZE:-5}
+      DATABASE_MAX_OVERFLOW: ${DATABASE_MAX_OVERFLOW:-10}
+
+      # Security - IMPORTANT: Change SECRET_KEY in production!
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production-use-python-secrets}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      PASSWORD_RESET_TOKEN_EXPIRE_HOURS: 24
+
+      # Application
+      DEBUG: ${DEBUG:-false}
+      APP_NAME: Hakinga API
+      API_V1_PREFIX: /api/v1
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+      # CORS - Add your domain
+      CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost","http://localhost:80","http://localhost:3000"]}'
+
+      # Redis
+      REDIS_URL: redis://redis:6379
+
+      # Migrations
+      RUN_MIGRATIONS: "true"
+      DB_MAX_RETRIES: 30
+      DB_RETRY_INTERVAL: 2
+
+      # Email (optional)
+      EMAIL_HOST: ${EMAIL_HOST:-smtp.gmail.com}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@hakinga.com}
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -105,23 +115,28 @@ services:
       start_period: 40s
     networks:
       - hakinga-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # ---------------------------------------------------------------------------
-  # Frontend
+  # Frontend (Nginx)
   # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000/api/v1}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     container_name: hakinga-frontend
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
       interval: 30s
@@ -129,19 +144,24 @@ services:
       retries: 3
     networks:
       - hakinga-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-# -----------------------------------------------------------------------------
-# Networks
-# -----------------------------------------------------------------------------
-networks:
-  hakinga-network:
-    driver: bridge
-
-# -----------------------------------------------------------------------------
-# Volumes
-# -----------------------------------------------------------------------------
+# =============================================================================
+# Volumes - Data persistence
+# =============================================================================
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  hakinga-network:
+    driver: bridge
