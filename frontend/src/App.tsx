@@ -29,9 +29,9 @@ import {
   // Private session pages
   CreatePrivateSessionPage,
   PrivateSessionLobbyPage,
+  PrivateRacePage,
   // Competition pages
   CompetitionPage,
-  RacePage,
 } from '@/pages';
 
 // Redirect authenticated users away from auth pages
@@ -149,7 +149,7 @@ function AppRoutes() {
         path="/private/race/:code"
         element={
           <ProtectedRoute>
-            <RacePage />
+            <PrivateRacePage />
           </ProtectedRoute>
         }
       />

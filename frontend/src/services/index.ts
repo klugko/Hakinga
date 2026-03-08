@@ -12,4 +12,6 @@ export { friendService } from './friendService';
 export { settingsService } from './settingsService';
 export { progressionService } from './progressionService';
 export { getRandomQuote, initQuoteService } from './quoteService';
+export { privateSessionService, PrivateSessionWebSocket } from './privateSessionService';
 export type { UserSettings } from './settingsService';
+export type { PrivateSession, CreateSessionOptions, WebSocketMessage } from './privateSessionService';
