@@ -2,7 +2,6 @@
 User repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.user import User
@@ -29,7 +28,7 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_by_id(self, user_id: UUID) -> User | None:
         """
         Get a user by their ID.
 
@@ -42,7 +41,7 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         """
         Get a user by their email.
 
@@ -55,7 +54,7 @@ class UserRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_username(self, username: str) -> Optional[User]:
+    async def get_by_username(self, username: str) -> User | None:
         """
         Get a user by their username.
 

@@ -1,8 +1,8 @@
 """
 Tests for prediction service.
 """
-import pytest
 from datetime import datetime, timedelta
+
 from app.application.services.prediction_service import (
     PredictionService,
     SessionRecord,

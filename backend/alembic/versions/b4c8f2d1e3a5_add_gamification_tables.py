@@ -5,17 +5,18 @@ Revises: 9bae76476d33
 Create Date: 2026-02-05 10:00:00.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision: str = 'b4c8f2d1e3a5'
-down_revision: Union[str, Sequence[str], None] = '9bae76476d33'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '9bae76476d33'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Define enum outside of functions for reuse
 RANK_TIER_VALUES = ('unranked', 'bronze', 'silver', 'gold',

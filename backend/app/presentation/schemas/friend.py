@@ -1,7 +1,6 @@
 """
 Friend schemas.
 """
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -26,7 +25,7 @@ class FriendResponse(BaseModel):
 
     id: str
     username: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     status: str
-    last_seen: Optional[str] = None
+    last_seen: str | None = None
     stats: dict

@@ -10,11 +10,11 @@ from app.presentation.api.v1.deps import CurrentUser, get_xp_service
 from app.presentation.schemas.common import ApiResponse
 from app.presentation.schemas.progression import (
     LevelInfoResponse,
+    RankLeaderboardEntry,
+    RankLeaderboardResponse,
     UserProgressResponse,
     XPLeaderboardEntry,
     XPLeaderboardResponse,
-    RankLeaderboardEntry,
-    RankLeaderboardResponse,
 )
 
 router = APIRouter()

@@ -3,7 +3,6 @@ Typing text service.
 
 Handles text retrieval and management.
 """
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.typing_text import Difficulty, TextLength, TypingText
@@ -19,8 +18,8 @@ class TextService:
 
     async def get_random_text(
         self,
-        difficulty: Optional[str] = None,
-        length: Optional[str] = None,
+        difficulty: str | None = None,
+        length: str | None = None,
     ) -> TypingText:
         """
         Get a random text with optional filters.
@@ -65,8 +64,8 @@ class TextService:
 
     async def list_texts(
         self,
-        difficulty: Optional[str] = None,
-        length: Optional[str] = None,
+        difficulty: str | None = None,
+        length: str | None = None,
         page: int = 1,
         limit: int = 20,
     ) -> dict:

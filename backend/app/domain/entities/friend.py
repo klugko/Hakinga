@@ -4,7 +4,6 @@ Friend and friendship domain entities.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 
@@ -37,7 +36,7 @@ class FriendRequest:
     to_user_id: UUID
     status: FriendRequestStatus
     created_at: datetime
-    responded_at: Optional[datetime] = None
+    responded_at: datetime | None = None
 
     def accept(self) -> None:
         """Accept the friend request."""

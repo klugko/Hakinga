@@ -3,9 +3,6 @@ Pattern analysis service for keystroke and typing patterns.
 Implements ML-based analysis for identifying weaknesses and patterns.
 """
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
-from collections import Counter
-import math
 
 
 @dataclass
@@ -15,7 +12,7 @@ class KeystrokeData:
     timestamp_ms: int
     correct: bool
     expected_key: str
-    time_since_last_ms: Optional[int] = None
+    time_since_last_ms: int | None = None
 
 
 @dataclass
@@ -45,15 +42,15 @@ class TypingProfile:
     total_sessions: int
     avg_wpm: float
     avg_accuracy: float
-    problematic_chars: List[CharacterStats]
-    problematic_bigrams: List[BigramStats]
-    problematic_trigrams: List[str]
-    keyboard_layout_issues: List[str]
-    error_patterns: Dict[str, int]
+    problematic_chars: list[CharacterStats]
+    problematic_bigrams: list[BigramStats]
+    problematic_trigrams: list[str]
+    keyboard_layout_issues: list[str]
+    error_patterns: dict[str, int]
     skill_level: str  # "beginner", "intermediate", "advanced", "expert"
     consistency_score: float  # 0-100
-    strengths: List[str] = field(default_factory=list)
-    weaknesses: List[str] = field(default_factory=list)
+    strengths: list[str] = field(default_factory=list)
+    weaknesses: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -61,7 +58,7 @@ class ErrorClassification:
     """Classification of typing errors."""
     error_type: str  # "substitution", "insertion", "deletion", "transposition"
     frequency: int
-    examples: List[Tuple[str, str]]  # (expected, actual)
+    examples: list[tuple[str, str]]  # (expected, actual)
 
 
 class PatternAnalysisService:
@@ -111,9 +108,9 @@ class PatternAnalysisService:
 
     def identify_missed_characters(
         self,
-        keystroke_history: List[KeystrokeData],
+        keystroke_history: list[KeystrokeData],
         min_attempts: int = 10,
-    ) -> List[CharacterStats]:
+    ) -> list[CharacterStats]:
         """
         Identify frequently missed characters.
 
@@ -124,7 +121,7 @@ class PatternAnalysisService:
         Returns:
             List of problematic character statistics
         """
-        char_stats: Dict[str, Dict] = {}
+        char_stats: dict[str, dict] = {}
 
         for keystroke in keystroke_history:
             char = keystroke.expected_key.lower()
@@ -162,9 +159,9 @@ class PatternAnalysisService:
 
     def detect_difficult_bigrams(
         self,
-        keystroke_history: List[KeystrokeData],
+        keystroke_history: list[KeystrokeData],
         min_occurrences: int = 5,
-    ) -> List[BigramStats]:
+    ) -> list[BigramStats]:
         """
         Detect difficult character bigrams (2-character sequences).
 
@@ -175,7 +172,7 @@ class PatternAnalysisService:
         Returns:
             List of problematic bigram statistics
         """
-        bigrams: Dict[str, Dict] = {}
+        bigrams: dict[str, dict] = {}
 
         for i in range(1, len(keystroke_history)):
             prev = keystroke_history[i - 1]
@@ -217,9 +214,9 @@ class PatternAnalysisService:
 
     def detect_difficult_trigrams(
         self,
-        keystroke_history: List[KeystrokeData],
+        keystroke_history: list[KeystrokeData],
         min_occurrences: int = 3,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Detect difficult character trigrams (3-character sequences).
 
@@ -230,7 +227,7 @@ class PatternAnalysisService:
         Returns:
             List of problematic trigrams
         """
-        trigrams: Dict[str, Dict] = {}
+        trigrams: dict[str, dict] = {}
 
         for i in range(2, len(keystroke_history)):
             chars = [keystroke_history[j].expected_key.lower() for j in range(i-2, i+1)]
@@ -254,8 +251,8 @@ class PatternAnalysisService:
 
     def classify_errors(
         self,
-        keystroke_history: List[KeystrokeData],
-    ) -> List[ErrorClassification]:
+        keystroke_history: list[KeystrokeData],
+    ) -> list[ErrorClassification]:
         """
         Classify typing errors by type.
 
@@ -271,7 +268,7 @@ class PatternAnalysisService:
         Returns:
             List of error classifications
         """
-        error_types: Dict[str, Dict] = {
+        error_types: dict[str, dict] = {
             'substitution': {'count': 0, 'examples': []},
             'adjacent_key': {'count': 0, 'examples': []},
             'transposition': {'count': 0, 'examples': []},
@@ -323,8 +320,8 @@ class PatternAnalysisService:
 
     def detect_keyboard_layout_issues(
         self,
-        keystroke_history: List[KeystrokeData],
-    ) -> List[str]:
+        keystroke_history: list[KeystrokeData],
+    ) -> list[str]:
         """
         Detect potential keyboard layout issues.
 
@@ -403,8 +400,8 @@ class PatternAnalysisService:
     def generate_typing_profile(
         self,
         user_id: str,
-        keystroke_history: List[KeystrokeData],
-        session_stats: Dict,
+        keystroke_history: list[KeystrokeData],
+        session_stats: dict,
     ) -> TypingProfile:
         """
         Generate a complete typing profile for a user.
@@ -483,7 +480,7 @@ class PatternAnalysisService:
         avg_accuracy: float,
         consistency: float,
         session_count: int,
-    ) -> Dict:
+    ) -> dict:
         """
         Calculate a real skill level based on multiple factors.
 

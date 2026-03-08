@@ -3,7 +3,6 @@ Achievement domain entity.
 """
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 
@@ -19,7 +18,7 @@ class Achievement:
     name: str
     description: str
     icon: str
-    max_progress: Optional[int] = None
+    max_progress: int | None = None
     is_active: bool = True
 
 
@@ -35,14 +34,14 @@ class UserAchievement:
     user_id: UUID
     achievement_id: UUID
     progress: int = 0
-    unlocked_at: Optional[datetime] = None
+    unlocked_at: datetime | None = None
 
     @property
     def is_unlocked(self) -> bool:
         """Check if achievement is unlocked."""
         return self.unlocked_at is not None
 
-    def update_progress(self, new_progress: int, max_progress: Optional[int]) -> bool:
+    def update_progress(self, new_progress: int, max_progress: int | None) -> bool:
         """
         Update achievement progress.
 

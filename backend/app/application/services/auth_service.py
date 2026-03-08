@@ -3,7 +3,7 @@ Authentication service.
 
 Handles user registration, login, and password management.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.core.security import (
@@ -69,7 +69,7 @@ class AuthService:
         if await self._user_repo.exists_by_username(username):
             raise DuplicateEntityError("User", "username", username)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = User(
             id=uuid4(),
             username=username,
@@ -165,7 +165,7 @@ class AuthService:
             raise EntityNotFoundError("User", email)
 
         user.password_hash = get_password_hash(new_password)
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         await self._user_repo.update(user)
 
         return True
@@ -204,7 +204,7 @@ class AuthService:
             raise AuthenticationError("Current password is incorrect")
 
         user.password_hash = get_password_hash(new_password)
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         await self._user_repo.update(user)
 
         return True
@@ -265,7 +265,7 @@ class AuthService:
         user.is_active = False
         user.email = f"deleted_{user.id}@deleted.local"
         user.username = f"deleted_{user.id}"
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         await self._user_repo.update(user)
 
         return True

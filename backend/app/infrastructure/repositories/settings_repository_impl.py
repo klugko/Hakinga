@@ -1,7 +1,6 @@
 """
 User settings repository PostgreSQL implementation.
 """
-from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -31,7 +30,7 @@ class PostgresSettingsRepository(SettingsRepository):
             keyboard_layout=model.keyboard_layout,
         )
 
-    async def get_by_user_id(self, user_id: UUID) -> Optional[UserSettings]:
+    async def get_by_user_id(self, user_id: UUID) -> UserSettings | None:
         result = await self._session.execute(
             select(UserSettingsModel).where(UserSettingsModel.user_id == user_id)
         )

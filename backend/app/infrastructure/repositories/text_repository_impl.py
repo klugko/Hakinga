@@ -1,7 +1,6 @@
 """
 Typing text repository PostgreSQL implementation.
 """
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -51,7 +50,7 @@ class PostgresTextRepository(TextRepository):
         await self._session.refresh(model)
         return self._to_entity(model)
 
-    async def get_by_id(self, text_id: UUID) -> Optional[TypingText]:
+    async def get_by_id(self, text_id: UUID) -> TypingText | None:
         result = await self._session.execute(
             select(TypingTextModel).where(TypingTextModel.id == text_id)
         )
@@ -60,9 +59,9 @@ class PostgresTextRepository(TextRepository):
 
     async def get_random(
         self,
-        difficulty: Optional[Difficulty] = None,
-        length: Optional[TextLength] = None,
-    ) -> Optional[TypingText]:
+        difficulty: Difficulty | None = None,
+        length: TextLength | None = None,
+    ) -> TypingText | None:
         query = select(TypingTextModel).where(TypingTextModel.is_active.is_(True))
 
         if difficulty:
@@ -78,8 +77,8 @@ class PostgresTextRepository(TextRepository):
 
     async def get_all(
         self,
-        difficulty: Optional[Difficulty] = None,
-        length: Optional[TextLength] = None,
+        difficulty: Difficulty | None = None,
+        length: TextLength | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[TypingText], int]:

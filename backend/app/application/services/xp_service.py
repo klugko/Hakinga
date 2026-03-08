@@ -3,8 +3,7 @@ XP calculation service.
 
 Handles XP calculation, level progression, and streak management.
 """
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.domain.entities.progression import (
@@ -15,7 +14,6 @@ from app.domain.entities.progression import (
 )
 from app.domain.entities.typing_session import SessionMode
 from app.domain.repositories.progression_repository import ProgressionRepository
-
 
 # XP Multipliers
 DIFFICULTY_MULTIPLIERS = {
@@ -137,8 +135,8 @@ class XPService:
                 best_streak=0,
                 rank_tier=RankTier.UNRANKED,
                 mmr=1000,
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC),
             )
             progress = await self._progression_repo.create(progress)
 
@@ -173,7 +171,7 @@ class XPService:
         progress = await self.get_user_progress(user_id)
 
         # Update streak
-        session_date = datetime.now(timezone.utc)
+        session_date = datetime.now(UTC)
         new_streak = progress.update_streak(session_date)
 
         # Check for personal best
@@ -195,7 +193,7 @@ class XPService:
         new_level, leveled_up = progress.add_xp(xp_gain)
 
         # Update progress
-        progress.updated_at = datetime.now(timezone.utc)
+        progress.updated_at = datetime.now(UTC)
         await self._progression_repo.update(progress)
 
         return xp_gain, progress.get_level_info(), leveled_up, new_streak

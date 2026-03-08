@@ -2,11 +2,10 @@
 Cheat management service for handling detected cheaters.
 Implements ban system for repeat offenders.
 """
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
+import uuid
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-import uuid
 
 
 class BanDuration(Enum):
@@ -34,13 +33,13 @@ class Violation:
     violation_id: str
     user_id: str
     violation_type: ViolationType
-    session_id: Optional[str]
+    session_id: str | None
     confidence: float
-    details: Dict
+    details: dict
     detected_at: datetime
     reviewed: bool = False
-    reviewed_by: Optional[str] = None
-    appeal_status: Optional[str] = None
+    reviewed_by: str | None = None
+    appeal_status: str | None = None
 
 
 @dataclass
@@ -50,24 +49,24 @@ class BanRecord:
     user_id: str
     duration: BanDuration
     reason: str
-    violations: List[str]  # Violation IDs
+    violations: list[str]  # Violation IDs
     banned_at: datetime
-    expires_at: Optional[datetime]
-    lifted_at: Optional[datetime] = None
-    lifted_by: Optional[str] = None
-    appeal_id: Optional[str] = None
+    expires_at: datetime | None
+    lifted_at: datetime | None = None
+    lifted_by: str | None = None
+    appeal_id: str | None = None
 
 
 @dataclass
 class UserCheatProfile:
     """Cheat profile for a user."""
     user_id: str
-    violations: List[Violation]
-    bans: List[BanRecord]
+    violations: list[Violation]
+    bans: list[BanRecord]
     warning_count: int
     trust_score: float  # 0-100, 100 = fully trusted
     is_currently_banned: bool
-    current_ban: Optional[BanRecord]
+    current_ban: BanRecord | None
 
 
 class CheatManagementService:
@@ -89,16 +88,16 @@ class CheatManagementService:
     PERMANENT_BAN_THRESHOLD = 5  # Fifth+ offense = permanent
 
     def __init__(self):
-        self._violations: Dict[str, List[Violation]] = {}
-        self._bans: Dict[str, List[BanRecord]] = {}
+        self._violations: dict[str, list[Violation]] = {}
+        self._bans: dict[str, list[BanRecord]] = {}
 
     def record_violation(
         self,
         user_id: str,
         violation_type: ViolationType,
         confidence: float,
-        session_id: Optional[str] = None,
-        details: Optional[Dict] = None,
+        session_id: str | None = None,
+        details: dict | None = None,
     ) -> Violation:
         """
         Record a new violation for a user.
@@ -132,8 +131,8 @@ class CheatManagementService:
     def get_user_violations(
         self,
         user_id: str,
-        since: Optional[datetime] = None,
-    ) -> List[Violation]:
+        since: datetime | None = None,
+    ) -> list[Violation]:
         """
         Get all violations for a user.
 
@@ -192,7 +191,7 @@ class CheatManagementService:
         user_id: str,
         duration: BanDuration,
         reason: str,
-        violation_ids: Optional[List[str]] = None,
+        violation_ids: list[str] | None = None,
     ) -> BanRecord:
         """
         Ban a user.
@@ -237,9 +236,9 @@ class CheatManagementService:
         user_id: str,
         violation_type: ViolationType,
         confidence: float,
-        session_id: Optional[str] = None,
-        details: Optional[Dict] = None,
-    ) -> Dict:
+        session_id: str | None = None,
+        details: dict | None = None,
+    ) -> dict:
         """
         Process a violation and determine action.
 
@@ -322,7 +321,7 @@ class CheatManagementService:
     def get_current_ban(
         self,
         user_id: str,
-    ) -> Optional[BanRecord]:
+    ) -> BanRecord | None:
         """
         Get the current active ban for a user.
 
@@ -351,7 +350,7 @@ class CheatManagementService:
         ban_id: str,
         lifted_by: str,
         reason: str = "Appeal approved",
-    ) -> Optional[BanRecord]:
+    ) -> BanRecord | None:
         """
         Lift a ban early.
 

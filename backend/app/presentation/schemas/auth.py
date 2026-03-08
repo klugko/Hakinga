@@ -1,7 +1,14 @@
 """
 Authentication schemas.
 """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from pydantic import BaseModel, EmailStr, Field
+
+if TYPE_CHECKING:
+    from app.presentation.schemas.user import UserResponse
 
 
 class RegisterRequest(BaseModel):
@@ -50,12 +57,16 @@ class TokenResponse(BaseModel):
 class AuthResponse(BaseModel):
     """Authentication response with user data."""
 
-    user: "UserResponse"
+    user: UserResponse
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
 
-from app.presentation.schemas.user import UserResponse
 
-AuthResponse.model_rebuild()
+def _rebuild_models() -> None:
+    from app.presentation.schemas.user import UserResponse  # noqa: F401
+    AuthResponse.model_rebuild()
+
+
+_rebuild_models()

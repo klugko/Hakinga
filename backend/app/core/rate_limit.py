@@ -4,8 +4,8 @@ Uses an in-memory sliding window algorithm.
 """
 import time
 from collections import defaultdict
-from typing import Dict, List, Tuple
-from fastapi import Request, Response, HTTPException
+
+from fastapi import HTTPException, Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 
@@ -15,7 +15,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Limits requests per IP address for specific endpoints.
     """
 
-    def __init__(self, app, limits: Dict[str, Tuple[int, int]] | None = None):
+    def __init__(self, app, limits: dict[str, tuple[int, int]] | None = None):
         """
         Initialize rate limiter.
 
@@ -26,7 +26,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.limits = limits or {}
-        self.requests: Dict[str, Dict[str, List[float]]] = defaultdict(lambda: defaultdict(list))
+        self.requests: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
 
     def get_client_ip(self, request: Request) -> str:
         """Get the client IP address from request."""
@@ -35,14 +35,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return forwarded.split(",")[0].strip()
         return request.client.host if request.client else "unknown"
 
-    def get_limit_for_path(self, path: str) -> Tuple[int, int] | None:
+    def get_limit_for_path(self, path: str) -> tuple[int, int] | None:
         """Get rate limit for a given path."""
         for pattern, limit in self.limits.items():
             if pattern in path:
                 return limit
         return None
 
-    def is_rate_limited(self, client_ip: str, path: str, limit: Tuple[int, int]) -> Tuple[bool, int]:
+    def is_rate_limited(self, client_ip: str, path: str, limit: tuple[int, int]) -> tuple[bool, int]:
         """
         Check if client is rate limited.
 

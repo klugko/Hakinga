@@ -1,8 +1,6 @@
 """
 User progression repository PostgreSQL implementation.
 """
-from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -10,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.entities.progression import RankTier, UserProgress
 from app.domain.repositories.progression_repository import ProgressionRepository
-from app.infrastructure.database.models import UserProgressModel, UserModel
+from app.infrastructure.database.models import UserModel, UserProgressModel
 
 
 class PostgresProgressionRepository(ProgressionRepository):
@@ -56,14 +54,14 @@ class PostgresProgressionRepository(ProgressionRepository):
         await self._session.refresh(model)
         return self._to_entity(model)
 
-    async def get_by_id(self, progress_id: UUID) -> Optional[UserProgress]:
+    async def get_by_id(self, progress_id: UUID) -> UserProgress | None:
         result = await self._session.execute(
             select(UserProgressModel).where(UserProgressModel.id == progress_id)
         )
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_user_id(self, user_id: UUID) -> Optional[UserProgress]:
+    async def get_by_user_id(self, user_id: UUID) -> UserProgress | None:
         result = await self._session.execute(
             select(UserProgressModel).where(UserProgressModel.user_id == user_id)
         )

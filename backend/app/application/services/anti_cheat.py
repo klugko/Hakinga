@@ -2,17 +2,15 @@
 Anti-cheat service for detecting suspicious typing patterns.
 """
 from dataclasses import dataclass
-from typing import List, Optional
-from datetime import datetime
 
 
 @dataclass
 class ValidationResult:
     """Result of anti-cheat validation."""
     is_valid: bool
-    flags: List[str]
+    flags: list[str]
     confidence: float  # 0.0 to 1.0
-    message: Optional[str] = None
+    message: str | None = None
 
 
 class AntiCheatService:
@@ -44,7 +42,7 @@ class AntiCheatService:
         duration_seconds: int,
         total_characters: int,
         errors: int,
-        user_average_wpm: Optional[float] = None,
+        user_average_wpm: float | None = None,
     ) -> ValidationResult:
         """
         Validate a typing session for potential cheating.
@@ -120,7 +118,7 @@ class AntiCheatService:
 
     def validate_keystroke_timing(
         self,
-        inter_keystroke_times: List[float],
+        inter_keystroke_times: list[float],
     ) -> ValidationResult:
         """
         Validate keystroke timing patterns for bot detection.

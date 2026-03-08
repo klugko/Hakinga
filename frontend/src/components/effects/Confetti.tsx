@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 interface ConfettiProps {
   active: boolean;
@@ -20,55 +20,70 @@ interface Particle {
   shape: 'square' | 'circle' | 'triangle';
 }
 
+function createParticle(
+  id: number,
+  width: number,
+  colors: string[]
+): Particle {
+  const shapes: Array<'square' | 'circle' | 'triangle'> = ['square', 'circle', 'triangle'];
+  return {
+    id,
+    x: (id * 17 + 7) % width,
+    y: -20,
+    rotation: (id * 37) % 360,
+    color: colors[id % colors.length],
+    size: 8 + ((id * 13) % 8),
+    velocityX: ((id * 23) % 10 - 5),
+    velocityY: 3 + ((id * 11) % 5),
+    rotationSpeed: ((id * 19) % 15 - 7.5),
+    shape: shapes[id % 3],
+  };
+}
+
 export function Confetti({
   active,
   duration = 3000,
   particleCount = 50,
   colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'],
 }: ConfettiProps) {
-  const [particles, setParticles] = useState<Particle[]>([]);
+  const [, setRenderKey] = useState(0);
+  const particlesRef = useRef<Particle[]>([]);
   const animationRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
 
+  const updateParticles = useCallback(() => {
+    particlesRef.current = particlesRef.current
+      .map(p => ({
+        ...p,
+        x: p.x + p.velocityX,
+        y: p.y + p.velocityY,
+        rotation: p.rotation + p.rotationSpeed,
+        velocityY: p.velocityY + 0.2,
+      }))
+      .filter(p => p.y < window.innerHeight + 50);
+
+    setRenderKey(k => k + 1);
+  }, []);
+
   useEffect(() => {
     if (active) {
-      // Generate particles
-      const newParticles: Particle[] = Array.from({ length: particleCount }, (_, i) => ({
-        id: i,
-        x: Math.random() * window.innerWidth,
-        y: -20,
-        rotation: Math.random() * 360,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: 8 + Math.random() * 8,
-        velocityX: (Math.random() - 0.5) * 10,
-        velocityY: 3 + Math.random() * 5,
-        rotationSpeed: (Math.random() - 0.5) * 15,
-        shape: (['square', 'circle', 'triangle'] as const)[Math.floor(Math.random() * 3)],
-      }));
-
-      setParticles(newParticles);
+      const width = window.innerWidth;
+      particlesRef.current = Array.from({ length: particleCount }, (_, i) =>
+        createParticle(i, width, colors)
+      );
       startTimeRef.current = Date.now();
+      setRenderKey(0);
 
       const animate = () => {
         const elapsed = Date.now() - startTimeRef.current;
 
         if (elapsed > duration) {
-          setParticles([]);
+          particlesRef.current = [];
+          setRenderKey(k => k + 1);
           return;
         }
 
-        setParticles(prev =>
-          prev
-            .map(p => ({
-              ...p,
-              x: p.x + p.velocityX,
-              y: p.y + p.velocityY,
-              rotation: p.rotation + p.rotationSpeed,
-              velocityY: p.velocityY + 0.2, // gravity
-            }))
-            .filter(p => p.y < window.innerHeight + 50)
-        );
-
+        updateParticles();
         animationRef.current = requestAnimationFrame(animate);
       };
 
@@ -80,9 +95,12 @@ export function Confetti({
         }
       };
     } else {
-      setParticles([]);
+      particlesRef.current = [];
+      setRenderKey(k => k + 1);
     }
-  }, [active, colors, duration, particleCount]);
+  }, [active, colors, duration, particleCount, updateParticles]);
+
+  const particles = particlesRef.current;
 
   if (particles.length === 0) return null;
 

@@ -1,7 +1,6 @@
 """
 Achievement repository PostgreSQL implementation.
 """
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import select
@@ -45,7 +44,7 @@ class PostgresAchievementRepository(AchievementRepository):
         )
         return [self._achievement_to_entity(model) for model in result.scalars().all()]
 
-    async def get_achievement_by_id(self, achievement_id: UUID) -> Optional[Achievement]:
+    async def get_achievement_by_id(self, achievement_id: UUID) -> Achievement | None:
         result = await self._session.execute(
             select(AchievementModel).where(AchievementModel.id == achievement_id)
         )
@@ -62,7 +61,7 @@ class PostgresAchievementRepository(AchievementRepository):
         self,
         user_id: UUID,
         achievement_id: UUID,
-    ) -> Optional[UserAchievement]:
+    ) -> UserAchievement | None:
         result = await self._session.execute(
             select(UserAchievementModel)
             .where(UserAchievementModel.user_id == user_id)

@@ -3,7 +3,6 @@ User domain entity.
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 
@@ -33,7 +32,7 @@ class User:
     password_hash: str
     created_at: datetime
     updated_at: datetime
-    avatar: Optional[str] = None
+    avatar: str | None = None
     is_active: bool = True
     is_verified: bool = False
     stats: UserStats = field(default_factory=UserStats)

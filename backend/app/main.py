@@ -3,18 +3,18 @@ Hakinga API - Main Application Entry Point.
 
 FastAPI application setup with middleware, routes, and lifecycle management.
 """
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
-from app.core.rate_limit import RateLimitMiddleware, DEFAULT_RATE_LIMITS
-from app.core.logging import setup_logging, RequestLoggingMiddleware
-from app.infrastructure.database.session import engine
-from app.infrastructure.database.base import Base
+from app.core.logging import RequestLoggingMiddleware, setup_logging
+from app.core.rate_limit import DEFAULT_RATE_LIMITS, RateLimitMiddleware
 from app.infrastructure.database import models  # noqa: F401 - Import models to register them
+from app.infrastructure.database.base import Base
+from app.infrastructure.database.session import engine
 from app.presentation.api.v1.router import api_router
 
 settings = get_settings()

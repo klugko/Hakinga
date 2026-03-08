@@ -305,7 +305,7 @@ interface FeatureHighlightProps {
 }
 
 export function FeatureHighlight({
-  feature,
+  feature: _feature,
   title,
   description,
   children,

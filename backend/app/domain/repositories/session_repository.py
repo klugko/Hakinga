@@ -3,7 +3,6 @@ Typing session repository interface.
 """
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.typing_session import SessionMode, TypingSession
@@ -28,7 +27,7 @@ class SessionRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, session_id: UUID) -> Optional[TypingSession]:
+    async def get_by_id(self, session_id: UUID) -> TypingSession | None:
         """
         Get a session by ID.
 
@@ -44,9 +43,9 @@ class SessionRepository(ABC):
     async def get_user_sessions(
         self,
         user_id: UUID,
-        mode: Optional[SessionMode] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        mode: SessionMode | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         sort_by: str = "completed_at",
         sort_order: str = "desc",
         limit: int = 20,

@@ -2,10 +2,9 @@
 Drill generation service for personalized practice exercises.
 Creates targeted exercises based on user weaknesses.
 """
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
-from enum import Enum
 import random
+from dataclasses import dataclass
+from enum import Enum
 
 
 class DrillType(Enum):
@@ -27,7 +26,7 @@ class DrillExercise:
     text: str
     target_wpm: int
     target_accuracy: float
-    focus_chars: List[str]
+    focus_chars: list[str]
     duration_seconds: int
     difficulty: str
     description: str
@@ -40,9 +39,9 @@ class TrainingPlan:
     user_id: str
     duration_days: int
     daily_target_minutes: int
-    focus_areas: List[str]
-    drills: List[DrillExercise]
-    milestones: List[Dict]
+    focus_areas: list[str]
+    drills: list[DrillExercise]
+    milestones: list[dict]
     description: str
 
 
@@ -108,7 +107,7 @@ class DrillGenerationService:
 
     def generate_character_drill(
         self,
-        target_chars: List[str],
+        target_chars: list[str],
         difficulty: str = "medium",
         word_count: int = 20,
     ) -> DrillExercise:
@@ -155,7 +154,7 @@ class DrillGenerationService:
 
     def generate_bigram_drill(
         self,
-        target_bigrams: List[str],
+        target_bigrams: list[str],
         difficulty: str = "medium",
     ) -> DrillExercise:
         """
@@ -338,7 +337,7 @@ class DrillGenerationService:
         self,
         user_profile: dict,
         count: int = 5,
-    ) -> List[DrillExercise]:
+    ) -> list[DrillExercise]:
         """
         Generate a set of personalized drills based on user profile.
 

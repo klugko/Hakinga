@@ -2,9 +2,8 @@
 Text targeting service for selecting texts based on user weaknesses.
 Implements intelligent text selection to accelerate learning.
 """
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Set
 import random
+from dataclasses import dataclass
 
 
 @dataclass
@@ -14,7 +13,7 @@ class TextCandidate:
     content: str
     difficulty: str
     relevance_score: float  # 0-100, how relevant to user's weaknesses
-    focus_chars: List[str]
+    focus_chars: list[str]
     estimated_challenge: str  # "easy", "optimal", "challenging"
 
 
@@ -22,7 +21,7 @@ class TextCandidate:
 class TextSelection:
     """Result of text selection."""
     selected_text: TextCandidate
-    alternatives: List[TextCandidate]
+    alternatives: list[TextCandidate]
     selection_reason: str
 
 
@@ -116,8 +115,8 @@ class TextTargetingService:
     def calculate_relevance_score(
         self,
         text: str,
-        weak_chars: Set[str],
-        weak_bigrams: Set[str],
+        weak_chars: set[str],
+        weak_bigrams: set[str],
     ) -> float:
         """
         Calculate how relevant a text is to user's weaknesses.
@@ -156,8 +155,8 @@ class TextTargetingService:
     def find_focus_chars_in_text(
         self,
         text: str,
-        weak_chars: Set[str],
-    ) -> List[str]:
+        weak_chars: set[str],
+    ) -> list[str]:
         """
         Find which weak characters appear in a text.
 
@@ -210,9 +209,9 @@ class TextTargetingService:
 
     def select_text_for_weakness(
         self,
-        available_texts: List[Dict],
-        weak_chars: List[str],
-        weak_bigrams: List[str],
+        available_texts: list[dict],
+        weak_chars: list[str],
+        weak_bigrams: list[str],
         user_avg_wpm: float,
         preferred_difficulty: str = "medium",
     ) -> TextSelection:
@@ -299,7 +298,7 @@ class TextTargetingService:
         self,
         char: str,
         count: int = 3,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get texts focusing on a specific character.
 
@@ -340,7 +339,7 @@ class TextTargetingService:
         self,
         bigram: str,
         count: int = 3,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Get texts focusing on a specific bigram.
 
@@ -362,8 +361,8 @@ class TextTargetingService:
 
     def build_weakness_text(
         self,
-        weak_chars: List[str],
-        weak_bigrams: List[str],
+        weak_chars: list[str],
+        weak_bigrams: list[str],
         length: int = 100,
     ) -> str:
         """

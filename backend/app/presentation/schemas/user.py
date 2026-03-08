@@ -2,7 +2,6 @@
 User schemas.
 """
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -24,7 +23,7 @@ class UserResponse(BaseModel):
     id: str
     username: str
     email: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     created_at: datetime
     stats: UserStatsResponse
 
@@ -34,7 +33,7 @@ class UserProfileResponse(BaseModel):
 
     id: str
     username: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     created_at: datetime
     stats: UserStatsResponse
 
@@ -42,9 +41,9 @@ class UserProfileResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     """Update profile request."""
 
-    username: Optional[str] = Field(None, min_length=3, max_length=50)
-    email: Optional[EmailStr] = None
-    avatar: Optional[str] = None
+    username: str | None = Field(None, min_length=3, max_length=50)
+    email: EmailStr | None = None
+    avatar: str | None = None
 
 
 class UserSearchResponse(BaseModel):
@@ -52,7 +51,7 @@ class UserSearchResponse(BaseModel):
 
     id: str
     username: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     stats: dict
 
 

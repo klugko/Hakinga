@@ -13,9 +13,9 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import models and base
-from app.infrastructure.database.base import Base
-from app.infrastructure.database import models  # noqa: F401 - Import all models
 from app.core.config import get_settings
+from app.infrastructure.database import models  # noqa: F401 - Import all models
+from app.infrastructure.database.base import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

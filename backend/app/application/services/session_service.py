@@ -3,18 +3,17 @@ Typing session service.
 
 Handles typing session creation and management with XP integration.
 """
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.domain.entities.progression import XPGain, LevelInfo
+from app.application.services.xp_service import XPService
+from app.domain.entities.progression import LevelInfo, XPGain
 from app.domain.entities.typing_session import SessionMode, TypingSession, WpmDataPoint
 from app.domain.exceptions import EntityNotFoundError
+from app.domain.repositories.progression_repository import ProgressionRepository
 from app.domain.repositories.session_repository import SessionRepository
 from app.domain.repositories.text_repository import TextRepository
 from app.domain.repositories.user_repository import UserRepository
-from app.domain.repositories.progression_repository import ProgressionRepository
-from app.application.services.xp_service import XPService
 
 
 class SessionService:
@@ -25,7 +24,7 @@ class SessionService:
         session_repository: SessionRepository,
         user_repository: UserRepository,
         text_repository: TextRepository,
-        progression_repository: Optional[ProgressionRepository] = None,
+        progression_repository: ProgressionRepository | None = None,
     ):
         self._session_repo = session_repository
         self._user_repo = user_repository
@@ -51,7 +50,7 @@ class SessionService:
         wpm_history: list[dict],
         max_combo: int = 0,
         difficulty: str = "medium",
-    ) -> tuple[TypingSession, Optional[XPGain], Optional[LevelInfo], bool, int]:
+    ) -> tuple[TypingSession, XPGain | None, LevelInfo | None, bool, int]:
         """
         Create a new typing session with XP calculation.
 
@@ -149,7 +148,7 @@ class SessionService:
         wpm_history: list[dict],
         max_combo: int = 0,
         difficulty: str = "medium",
-    ) -> tuple[TypingSession, Optional[XPGain], Optional[LevelInfo], bool, int]:
+    ) -> tuple[TypingSession, XPGain | None, LevelInfo | None, bool, int]:
         """
         Create a new solo typing session.
 
@@ -171,7 +170,7 @@ class SessionService:
         Returns:
             Tuple of (session, xp_gain, level_info, leveled_up, new_streak).
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         return await self.create_session(
             user_id=str(user_id),
@@ -184,7 +183,7 @@ class SessionService:
             total_characters=total_characters,
             correct_characters=correct_characters,
             duration=duration,
-            started_at=datetime.fromtimestamp(now.timestamp() - duration, tz=timezone.utc),
+            started_at=datetime.fromtimestamp(now.timestamp() - duration, tz=UTC),
             completed_at=now,
             mode=SessionMode.SOLO,
             wpm_history=wpm_history,
@@ -216,8 +215,8 @@ class SessionService:
     async def get_session_history(
         self,
         user_id: UUID,
-        mode: Optional[str] = None,
-        date_range: Optional[str] = None,
+        mode: str | None = None,
+        date_range: str | None = None,
         sort_by: str = "date",
         sort_order: str = "desc",
         page: int = 1,
@@ -245,7 +244,7 @@ class SessionService:
             session_mode = SessionMode(mode)
 
         start_date = None
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
 
         if date_range == "today":
             start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)

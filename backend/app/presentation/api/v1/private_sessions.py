@@ -3,23 +3,24 @@ Private session API routes with WebSocket support.
 """
 import asyncio
 import secrets
-from datetime import datetime, timezone
-from typing import Annotated, Dict, List, Set
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.domain.entities.private_session import PrivateSessionStatus
 from app.domain.entities.typing_text import Difficulty, TextLength
-from app.domain.exceptions import EntityNotFoundError, ValidationError
+from app.infrastructure.database.models import (
+    PrivateSessionModel,
+    SessionPlayerModel,
+    TypingTextModel,
+)
+from app.infrastructure.database.session import AsyncSessionLocal
 from app.presentation.api.v1.deps import CurrentUser, DbSession
 from app.presentation.schemas.common import ApiResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.infrastructure.database.session import AsyncSessionLocal
-from app.infrastructure.database.models import PrivateSessionModel, SessionPlayerModel, TypingTextModel, UserModel
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 router = APIRouter()
 
@@ -69,8 +70,8 @@ class ConnectionManager:
     """Manages WebSocket connections for private sessions."""
 
     def __init__(self):
-        self.active_connections: Dict[str, Dict[str, WebSocket]] = {}
-        self.user_sessions: Dict[str, str] = {}
+        self.active_connections: dict[str, dict[str, WebSocket]] = {}
+        self.user_sessions: dict[str, str] = {}
 
     async def connect(self, websocket: WebSocket, session_code: str, user_id: str):
         """Connect a user to a session."""
@@ -131,7 +132,7 @@ async def create_private_session(
     text_query = select(TypingTextModel).where(
         TypingTextModel.difficulty == difficulty,
         TypingTextModel.length == length,
-        TypingTextModel.is_active == True,
+        TypingTextModel.is_active.is_(True),
     ).order_by(TypingTextModel.id).limit(10)
     result = await db.execute(text_query)
     texts = result.scalars().all()
@@ -472,7 +473,7 @@ async def start_race(
     await asyncio.sleep(3)
 
     session.status = PrivateSessionStatus.RACING
-    session.started_at = datetime.now(timezone.utc)
+    session.started_at = datetime.now(UTC)
     await db.commit()
 
     await manager.broadcast(
@@ -546,7 +547,7 @@ async def websocket_endpoint(
                             player.progress = 100
                             player.wpm = data.get("wpm", 0)
                             player.accuracy = data.get("accuracy", 100)
-                            player.finished_at = datetime.now(timezone.utc)
+                            player.finished_at = datetime.now(UTC)
 
                             finished_count = await db.execute(
                                 select(SessionPlayerModel).where(

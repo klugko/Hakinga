@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Keyboard,
@@ -28,6 +28,14 @@ function LandingPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeKeys, setActiveKeys] = useState<string[]>([]);
 
+  const simulateKeyPress = useCallback((char: string) => {
+    const key = char.toUpperCase();
+    setActiveKeys((prev) => [...prev, key]);
+    setTimeout(() => {
+      setActiveKeys((prev) => prev.filter((k) => k !== key));
+    }, 150);
+  }, []);
+
   useEffect(() => {
     const currentText = TYPING_TEXTS[typingIndex];
     const timeout = setTimeout(
@@ -51,15 +59,7 @@ function LandingPage() {
       isDeleting ? 30 : 80
     );
     return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, typingIndex]);
-
-  const simulateKeyPress = (char: string) => {
-    const key = char.toUpperCase();
-    setActiveKeys((prev) => [...prev, key]);
-    setTimeout(() => {
-      setActiveKeys((prev) => prev.filter((k) => k !== key));
-    }, 150);
-  };
+  }, [displayText, isDeleting, typingIndex, simulateKeyPress]);
 
   const keyboardRows = [
     ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],

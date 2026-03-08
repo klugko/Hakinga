@@ -3,7 +3,6 @@ Settings service.
 
 Handles user settings management.
 """
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.settings import UserSettings
@@ -36,12 +35,12 @@ class SettingsService:
     async def update_settings(
         self,
         user_id: UUID,
-        sound_effects: Optional[bool] = None,
-        notifications: Optional[bool] = None,
-        show_wpm_live: Optional[bool] = None,
-        show_accuracy_live: Optional[bool] = None,
-        theme: Optional[str] = None,
-        keyboard_layout: Optional[str] = None,
+        sound_effects: bool | None = None,
+        notifications: bool | None = None,
+        show_wpm_live: bool | None = None,
+        show_accuracy_live: bool | None = None,
+        theme: str | None = None,
+        keyboard_layout: str | None = None,
     ) -> UserSettings:
         """
         Update user settings.

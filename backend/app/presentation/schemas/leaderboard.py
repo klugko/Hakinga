@@ -1,7 +1,6 @@
 """
 Leaderboard schemas.
 """
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -12,7 +11,7 @@ class LeaderboardEntryResponse(BaseModel):
     rank: int
     user_id: str
     username: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     wpm: int
     accuracy: float
     sessions_played: int

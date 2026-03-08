@@ -3,7 +3,7 @@ Security utilities for authentication and authorization.
 
 Provides password hashing and JWT token management.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import bcrypt
@@ -40,9 +40,9 @@ def create_access_token(subject: str, expires_delta: timedelta | None = None) ->
         Encoded JWT token string.
     """
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             minutes=settings.access_token_expire_minutes
         )
 
@@ -64,7 +64,7 @@ def create_refresh_token(subject: str) -> str:
     Returns:
         Encoded JWT refresh token string.
     """
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
+    expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     to_encode: dict[str, Any] = {
         "sub": subject,
         "exp": expire,
@@ -100,7 +100,7 @@ def create_password_reset_token(email: str) -> str:
     Returns:
         Encoded JWT token for password reset.
     """
-    expire = datetime.now(timezone.utc) + timedelta(
+    expire = datetime.now(UTC) + timedelta(
         hours=settings.password_reset_token_expire_hours
     )
     to_encode: dict[str, Any] = {

@@ -3,7 +3,7 @@ Training API routes (placeholder for future features).
 """
 from fastapi import APIRouter
 
-from app.presentation.schemas.common import ApiResponse, MessageResponse
+from app.presentation.schemas.common import ApiResponse
 
 router = APIRouter()
 

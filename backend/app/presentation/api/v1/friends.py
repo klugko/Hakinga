@@ -9,7 +9,11 @@ from app.application.services.friend_service import FriendService
 from app.domain.exceptions import DuplicateEntityError, EntityNotFoundError, ValidationError
 from app.presentation.api.v1.deps import CurrentUser, get_friend_service
 from app.presentation.schemas.common import ApiResponse, MessageResponse
-from app.presentation.schemas.friend import FriendRequestCreate, FriendRequestResponse, FriendResponse
+from app.presentation.schemas.friend import (
+    FriendRequestCreate,
+    FriendRequestResponse,
+    FriendResponse,
+)
 
 router = APIRouter()
 

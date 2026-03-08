@@ -1,17 +1,16 @@
 """
 Structured logging configuration for the application.
 """
+import json
 import logging
 import sys
-import json
-from datetime import datetime, timezone
-from typing import Any, Dict
-from uuid import uuid4
 from contextvars import ContextVar
+from datetime import UTC, datetime
+from typing import Any
+from uuid import uuid4
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-
 
 # Context variable for request ID
 request_id_var: ContextVar[str] = ContextVar("request_id", default="")
@@ -22,7 +21,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -82,7 +81,7 @@ def get_logger(name: str) -> logging.Logger:
 class LoggingContextAdapter(logging.LoggerAdapter):
     """Logger adapter that adds context to log records."""
 
-    def process(self, msg: str, kwargs: Dict[str, Any]) -> tuple:
+    def process(self, msg: str, kwargs: dict[str, Any]) -> tuple:
         extra = kwargs.get("extra", {})
         extra["request_id"] = request_id_var.get("")
         kwargs["extra"] = extra
@@ -104,7 +103,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         request_id_var.set(request_id)
 
         # Record start time
-        start_time = datetime.now(timezone.utc)
+        start_time = datetime.now(UTC)
 
         # Log request
         self.logger.info(
@@ -122,7 +121,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
 
             # Calculate duration
-            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            duration_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             # Log response
             self.logger.info(
@@ -143,7 +142,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Calculate duration
-            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+            duration_ms = (datetime.now(UTC) - start_time).total_seconds() * 1000
 
             # Log error
             self.logger.error(
@@ -165,7 +164,7 @@ def log_session_event(
     event_type: str,
     user_id: str,
     session_id: str,
-    data: Dict[str, Any] | None = None,
+    data: dict[str, Any] | None = None,
 ) -> None:
     """Log a session-related event."""
     logger = get_logger("sessions")

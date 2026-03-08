@@ -3,10 +3,10 @@ Achievement service.
 
 Handles achievement tracking and unlocking.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from app.domain.entities.achievement import Achievement, UserAchievement
+from app.domain.entities.achievement import UserAchievement
 from app.domain.repositories.achievement_repository import AchievementRepository
 
 
@@ -113,7 +113,7 @@ class AchievementService:
                         progress_value or 0, achievement.max_progress
                     )
                 else:
-                    user_ach.unlocked_at = datetime.now(timezone.utc)
+                    user_ach.unlocked_at = datetime.now(UTC)
                     was_unlocked = True
 
                 await self._achievement_repo.update_user_achievement(user_ach)

@@ -199,7 +199,7 @@ async def delete_account(
     try:
         await auth_service.delete_account(user_id=str(current_user.id))
         return ApiResponse(data=MessageResponse(message="Account deleted successfully"))
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete account"

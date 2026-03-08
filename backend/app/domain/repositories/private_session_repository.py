@@ -2,10 +2,9 @@
 Private session repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
-from app.domain.entities.private_session import PrivateSession, PrivateSessionStatus
+from app.domain.entities.private_session import PrivateSession
 
 
 class PrivateSessionRepository(ABC):
@@ -19,12 +18,12 @@ class PrivateSessionRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, session_id: UUID) -> Optional[PrivateSession]:
+    async def get_by_id(self, session_id: UUID) -> PrivateSession | None:
         """Get a private session by ID."""
         ...
 
     @abstractmethod
-    async def get_by_code(self, code: str) -> Optional[PrivateSession]:
+    async def get_by_code(self, code: str) -> PrivateSession | None:
         """
         Get a private session by its code.
 

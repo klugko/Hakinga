@@ -1,11 +1,10 @@
 """
 Private session repository PostgreSQL implementation.
 """
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -85,7 +84,7 @@ class PostgresPrivateSessionRepository(PrivateSessionRepository):
         await self._session.refresh(model, ["players"])
         return self._to_entity(model)
 
-    async def get_by_id(self, session_id: UUID) -> Optional[PrivateSession]:
+    async def get_by_id(self, session_id: UUID) -> PrivateSession | None:
         result = await self._session.execute(
             select(PrivateSessionModel)
             .options(selectinload(PrivateSessionModel.players))
@@ -94,7 +93,7 @@ class PostgresPrivateSessionRepository(PrivateSessionRepository):
         model = result.scalar_one_or_none()
         return self._to_entity(model) if model else None
 
-    async def get_by_code(self, code: str) -> Optional[PrivateSession]:
+    async def get_by_code(self, code: str) -> PrivateSession | None:
         result = await self._session.execute(
             select(PrivateSessionModel)
             .options(selectinload(PrivateSessionModel.players))
@@ -175,7 +174,7 @@ class PostgresPrivateSessionRepository(PrivateSessionRepository):
         return [self._to_entity(model) for model in result.scalars().unique().all()]
 
     async def cleanup_expired_sessions(self, max_age_minutes: int = 30) -> int:
-        cutoff = datetime.now(timezone.utc) - timedelta(minutes=max_age_minutes)
+        cutoff = datetime.now(UTC) - timedelta(minutes=max_age_minutes)
 
         result = await self._session.execute(
             delete(PrivateSessionModel)

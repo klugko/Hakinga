@@ -5,9 +5,9 @@ Run with: python -m scripts.seed_code_texts
 import asyncio
 from uuid import uuid4
 
-from app.infrastructure.database.session import AsyncSessionLocal
-from app.infrastructure.database.models import TypingTextModel
 from app.domain.entities.typing_text import Difficulty, TextLength
+from app.infrastructure.database.models import TypingTextModel
+from app.infrastructure.database.session import AsyncSessionLocal
 
 # Python code snippets
 PYTHON_TEXTS = [

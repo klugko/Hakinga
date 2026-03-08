@@ -1,9 +1,8 @@
 """
 Typing session API routes.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Annotated
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
@@ -14,13 +13,13 @@ from app.presentation.api.v1.deps import CurrentUser, get_session_service
 from app.presentation.schemas.common import ApiResponse
 from app.presentation.schemas.session import (
     CreateSessionRequest,
+    LevelInfoSchema,
     SessionHistoryResponse,
     SessionListResponse,
     SessionResponse,
     SessionWithXPResponse,
     WpmDataPointSchema,
     XPBreakdownSchema,
-    LevelInfoSchema,
 )
 
 router = APIRouter()
@@ -34,9 +33,9 @@ async def create_session(
 ) -> ApiResponse[SessionWithXPResponse]:
     """Create a new typing session (save session results) with XP calculation."""
     try:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         started_at = datetime.fromtimestamp(
-            now.timestamp() - request.duration, tz=timezone.utc
+            now.timestamp() - request.duration, tz=UTC
         )
 
         session, xp_gain, level_info, leveled_up, new_streak = await session_service.create_session(

@@ -5,7 +5,7 @@ Custom exceptions for domain-specific error conditions.
 """
 
 
-class DomainException(Exception):
+class DomainError(Exception):
     """Base exception for all domain errors."""
 
     def __init__(self, message: str, code: str = "DOMAIN_ERROR"):
@@ -14,7 +14,7 @@ class DomainException(Exception):
         super().__init__(message)
 
 
-class EntityNotFoundError(DomainException):
+class EntityNotFoundError(DomainError):
     """Raised when an entity is not found."""
 
     def __init__(self, entity_type: str, identifier: str):
@@ -24,7 +24,7 @@ class EntityNotFoundError(DomainException):
         )
 
 
-class DuplicateEntityError(DomainException):
+class DuplicateEntityError(DomainError):
     """Raised when attempting to create a duplicate entity."""
 
     def __init__(self, entity_type: str, field: str, value: str):
@@ -34,21 +34,21 @@ class DuplicateEntityError(DomainException):
         )
 
 
-class AuthenticationError(DomainException):
+class AuthenticationError(DomainError):
     """Raised for authentication failures."""
 
     def __init__(self, message: str = "Authentication failed"):
         super().__init__(message=message, code="UNAUTHORIZED")
 
 
-class AuthorizationError(DomainException):
+class AuthorizationError(DomainError):
     """Raised for authorization failures."""
 
     def __init__(self, message: str = "Access denied"):
         super().__init__(message=message, code="FORBIDDEN")
 
 
-class ValidationError(DomainException):
+class ValidationError(DomainError):
     """Raised for validation failures."""
 
     def __init__(self, message: str, field: str | None = None):
@@ -56,7 +56,7 @@ class ValidationError(DomainException):
         super().__init__(message=message, code=code)
 
 
-class SessionFullError(DomainException):
+class SessionFullError(DomainError):
     """Raised when a private session is full."""
 
     def __init__(self):
@@ -74,7 +74,7 @@ class SessionNotFoundError(EntityNotFoundError):
         self.code = "SESSION_NOT_FOUND"
 
 
-class InvalidSessionStateError(DomainException):
+class InvalidSessionStateError(DomainError):
     """Raised when an operation is invalid for the current session state."""
 
     def __init__(self, current_state: str, required_state: str):
@@ -84,7 +84,7 @@ class InvalidSessionStateError(DomainException):
         )
 
 
-class FriendRequestError(DomainException):
+class FriendRequestError(DomainError):
     """Raised for friend request related errors."""
 
     def __init__(self, message: str):

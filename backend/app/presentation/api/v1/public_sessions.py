@@ -2,24 +2,19 @@
 Public session API routes with matchmaking queue.
 """
 import asyncio
-import secrets
-from datetime import datetime, timezone
-from typing import Dict, List, Set
-from uuid import UUID, uuid4
-from enum import Enum
-
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
-from pydantic import BaseModel
-
-from app.domain.entities.private_session import PrivateSessionStatus
-from app.domain.entities.typing_text import Difficulty, TextLength
-from app.presentation.api.v1.deps import CurrentUser, DbSession
-from app.presentation.schemas.common import ApiResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.infrastructure.database.session import AsyncSessionLocal
-from app.infrastructure.database.models import TypingTextModel, UserModel
-from sqlalchemy import select
 import random
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
+
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from pydantic import BaseModel
+from sqlalchemy import select
+
+from app.domain.entities.typing_text import Difficulty
+from app.infrastructure.database.models import TypingTextModel, UserModel
+from app.infrastructure.database.session import AsyncSessionLocal
+from app.presentation.api.v1.deps import CurrentUser
+from app.presentation.schemas.common import ApiResponse
 
 router = APIRouter()
 
@@ -33,7 +28,7 @@ class QueuePlayer:
         self.avatar = avatar
         self.difficulty = difficulty
         self.websocket = websocket
-        self.joined_at = datetime.now(timezone.utc)
+        self.joined_at = datetime.now(UTC)
 
 
 class PublicSession:
@@ -45,8 +40,8 @@ class PublicSession:
         self.text_content = text_content
         self.text_id = text_id
         self.status = "lobby"  # lobby, countdown, racing, finished
-        self.players: Dict[str, dict] = {}  # user_id -> player data
-        self.connections: Dict[str, WebSocket] = {}  # user_id -> websocket
+        self.players: dict[str, dict] = {}  # user_id -> player data
+        self.connections: dict[str, WebSocket] = {}  # user_id -> websocket
         self.started_at: datetime | None = None
         self.finished_count = 0
 
@@ -82,14 +77,14 @@ class MatchmakingManager:
     """Manages matchmaking queues and public sessions."""
 
     def __init__(self):
-        self.queues: Dict[str, List[QueuePlayer]] = {
+        self.queues: dict[str, list[QueuePlayer]] = {
             "easy": [],
             "medium": [],
             "hard": [],
         }
-        self.sessions: Dict[str, PublicSession] = {}  # session_id -> session
-        self.user_queue: Dict[str, str] = {}  # user_id -> difficulty
-        self.user_session: Dict[str, str] = {}  # user_id -> session_id
+        self.sessions: dict[str, PublicSession] = {}  # session_id -> session
+        self.user_queue: dict[str, str] = {}  # user_id -> difficulty
+        self.user_session: dict[str, str] = {}  # user_id -> session_id
         self.lock = asyncio.Lock()
 
     async def join_queue(
@@ -134,7 +129,7 @@ class MatchmakingManager:
                 async with AsyncSessionLocal() as db:
                     text_query = select(TypingTextModel).where(
                         TypingTextModel.difficulty == Difficulty(difficulty),
-                        TypingTextModel.is_active == True,
+                        TypingTextModel.is_active.is_(True),
                     ).limit(20)
                     result = await db.execute(text_query)
                     texts = result.scalars().all()
@@ -255,7 +250,7 @@ async def queue_websocket(websocket: WebSocket):
             difficulty = "medium"
 
         # Join queue
-        player = await matchmaking.join_queue(user_id, username, avatar, difficulty, websocket)
+        await matchmaking.join_queue(user_id, username, avatar, difficulty, websocket)
 
         # Send confirmation
         await websocket.send_json({
@@ -302,7 +297,7 @@ async def queue_websocket(websocket: WebSocket):
                         session.players[user_id]["wpm"] = data.get("wpm", 0)
                         session.players[user_id]["accuracy"] = data.get("accuracy", 100)
                         session.players[user_id]["position"] = position
-                        session.players[user_id]["finished_at"] = datetime.now(timezone.utc).isoformat()
+                        session.players[user_id]["finished_at"] = datetime.now(UTC).isoformat()
 
                         # Calculate points based on position
                         points_map = {1: 50, 2: 30, 3: 20, 4: 10, 5: 5}
@@ -346,7 +341,7 @@ async def queue_websocket(websocket: WebSocket):
 async def check_matchmaking_loop(user_id: str, difficulty: str, websocket: WebSocket):
     """Background task to check for matches."""
     max_wait_time = 60  # seconds
-    start_time = datetime.now(timezone.utc)
+    start_time = datetime.now(UTC)
     last_queue_update = 0
 
     while True:
@@ -404,14 +399,14 @@ async def check_matchmaking_loop(user_id: str, difficulty: str, websocket: WebSo
 
                 # Start race
                 session.status = "racing"
-                session.started_at = datetime.now(timezone.utc)
+                session.started_at = datetime.now(UTC)
                 await session.broadcast({
                     "type": "race_started",
                 })
                 break
 
             # Check timeout
-            elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
+            elapsed = (datetime.now(UTC) - start_time).total_seconds()
             if elapsed >= max_wait_time:
                 # Force start with available players (min 2)
                 queue = matchmaking.queues[difficulty]

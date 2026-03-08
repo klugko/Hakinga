@@ -2,7 +2,6 @@
 Friend and friendship repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.friend import FriendRequest, FriendRequestStatus, Friendship
@@ -19,7 +18,7 @@ class FriendRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_friend_request_by_id(self, request_id: UUID) -> Optional[FriendRequest]:
+    async def get_friend_request_by_id(self, request_id: UUID) -> FriendRequest | None:
         """Get a friend request by ID."""
         ...
 
@@ -33,7 +32,7 @@ class FriendRepository(ABC):
         self,
         from_user_id: UUID,
         to_user_id: UUID,
-    ) -> Optional[FriendRequest]:
+    ) -> FriendRequest | None:
         """Get pending request between two specific users."""
         ...
 
@@ -74,7 +73,7 @@ class FriendRepository(ABC):
     async def get_sent_requests(
         self,
         user_id: UUID,
-        status: Optional[FriendRequestStatus] = None,
+        status: FriendRequestStatus | None = None,
     ) -> list[FriendRequest]:
         """Get friend requests sent by a user."""
         ...

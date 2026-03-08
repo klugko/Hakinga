@@ -2,7 +2,6 @@
 User progression repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.progression import UserProgress
@@ -27,7 +26,7 @@ class ProgressionRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, progress_id: UUID) -> Optional[UserProgress]:
+    async def get_by_id(self, progress_id: UUID) -> UserProgress | None:
         """
         Get a progress record by ID.
 
@@ -40,7 +39,7 @@ class ProgressionRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_user_id(self, user_id: UUID) -> Optional[UserProgress]:
+    async def get_by_user_id(self, user_id: UUID) -> UserProgress | None:
         """
         Get a user's progress record.
 

@@ -3,8 +3,7 @@ Friend service.
 
 Handles friend requests and friendships.
 """
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from app.domain.entities.friend import FriendRequest, FriendRequestStatus, Friendship
@@ -70,7 +69,7 @@ class FriendService:
             from_user_id=from_user_id,
             to_user_id=to_user.id,
             status=FriendRequestStatus.PENDING,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
 
         return await self._friend_repo.create_friend_request(request)
@@ -111,7 +110,7 @@ class FriendService:
             id=uuid4(),
             user_id=request.from_user_id,
             friend_id=request.to_user_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
 
         return await self._friend_repo.create_friendship(friendship)

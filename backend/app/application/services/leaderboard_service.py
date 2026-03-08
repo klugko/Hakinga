@@ -3,8 +3,7 @@ Leaderboard service.
 
 Handles leaderboard queries and rankings.
 """
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.domain.repositories.friend_repository import FriendRepository
@@ -22,12 +21,12 @@ class LeaderboardService:
         self._leaderboard_repo = leaderboard_repository
         self._friend_repo = friend_repository
 
-    def _get_date_range(self, time_range: Optional[str]) -> tuple[Optional[datetime], Optional[datetime]]:
+    def _get_date_range(self, time_range: str | None) -> tuple[datetime | None, datetime | None]:
         """Get start and end dates for a time range."""
         if not time_range or time_range == "all":
             return None, None
 
-        end_date = datetime.now(timezone.utc)
+        end_date = datetime.now(UTC)
         start_date = None
 
         if time_range == "today":
@@ -41,7 +40,7 @@ class LeaderboardService:
 
     async def get_global_leaderboard(
         self,
-        time_range: Optional[str] = None,
+        time_range: str | None = None,
         page: int = 1,
         limit: int = 20,
     ) -> dict:
@@ -87,8 +86,8 @@ class LeaderboardService:
     async def get_user_rank(
         self,
         user_id: UUID,
-        time_range: Optional[str] = None,
-    ) -> Optional[dict]:
+        time_range: str | None = None,
+    ) -> dict | None:
         """
         Get a user's position on the leaderboard.
 
@@ -123,7 +122,7 @@ class LeaderboardService:
     async def get_friends_leaderboard(
         self,
         user_id: UUID,
-        time_range: Optional[str] = None,
+        time_range: str | None = None,
     ) -> list[dict]:
         """
         Get leaderboard for user and their friends.

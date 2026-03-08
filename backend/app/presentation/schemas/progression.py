@@ -2,7 +2,6 @@
 User progression schemas.
 """
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -38,7 +37,7 @@ class UserProgressResponse(BaseModel):
     current_level: int
     current_streak: int
     best_streak: int
-    last_session_date: Optional[datetime]
+    last_session_date: datetime | None
     rank_tier: str
     mmr: int
     level_info: LevelInfoResponse
@@ -50,7 +49,7 @@ class SessionXPResponse(BaseModel):
     xp_gained: XPBreakdownResponse
     level_info: LevelInfoResponse
     leveled_up: bool
-    new_level: Optional[int]
+    new_level: int | None
     new_streak: int
 
 
@@ -60,7 +59,7 @@ class XPLeaderboardEntry(BaseModel):
     rank: int
     user_id: str
     username: str
-    avatar: Optional[str]
+    avatar: str | None
     total_xp: int
     level: int
     streak: int
@@ -71,7 +70,7 @@ class XPLeaderboardResponse(BaseModel):
     """XP leaderboard response."""
 
     entries: list[XPLeaderboardEntry]
-    user_rank: Optional[int]
+    user_rank: int | None
     total_users: int
 
 
@@ -81,7 +80,7 @@ class RankLeaderboardEntry(BaseModel):
     rank: int
     user_id: str
     username: str
-    avatar: Optional[str]
+    avatar: str | None
     mmr: int
     rank_tier: str
     level: int

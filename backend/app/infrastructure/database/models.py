@@ -4,7 +4,7 @@ SQLAlchemy database models.
 ORM models mapping to PostgreSQL tables.
 """
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import (
@@ -18,7 +18,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.domain.entities.friend import FriendRequestStatus
@@ -38,7 +39,7 @@ class UserModel(Base, TimestampMixin):
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    avatar: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    avatar: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -49,9 +50,9 @@ class UserModel(Base, TimestampMixin):
     total_time_typed: Mapped[int] = mapped_column(Integer, default=0)
     total_characters_typed: Mapped[int] = mapped_column(Integer, default=0)
 
-    sessions: Mapped[List["TypingSessionModel"]] = relationship(back_populates="user")
+    sessions: Mapped[list["TypingSessionModel"]] = relationship(back_populates="user")
     settings: Mapped[Optional["UserSettingsModel"]] = relationship(back_populates="user")
-    achievements: Mapped[List["UserAchievementModel"]] = relationship(back_populates="user")
+    achievements: Mapped[list["UserAchievementModel"]] = relationship(back_populates="user")
 
 
 class UserSettingsModel(Base, TimestampMixin):
@@ -83,8 +84,8 @@ class TypingTextModel(Base, TimestampMixin):
     difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty))
     length: Mapped[TextLength] = mapped_column(Enum(TextLength))
     word_count: Mapped[int] = mapped_column(Integer)
-    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    author: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    category: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    author: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
 
@@ -110,10 +111,10 @@ class TypingSessionModel(Base):
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     mode: Mapped[SessionMode] = mapped_column(Enum(SessionMode))
     wpm_history: Mapped[list] = mapped_column(JSONB, default=list)
-    private_session_id: Mapped[Optional[UUID]] = mapped_column(
+    private_session_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), nullable=True
     )
-    competition_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), nullable=True)
+    competition_id: Mapped[UUID | None] = mapped_column(PGUUID(as_uuid=True), nullable=True)
     # Gamification fields
     max_combo: Mapped[int] = mapped_column(Integer, default=0)
     xp_earned: Mapped[int] = mapped_column(Integer, default=0)
@@ -130,10 +131,10 @@ class AchievementModel(Base, TimestampMixin):
     name: Mapped[str] = mapped_column(String(100), unique=True)
     description: Mapped[str] = mapped_column(String(500))
     icon: Mapped[str] = mapped_column(String(50))
-    max_progress: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    max_progress: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
-    user_achievements: Mapped[List["UserAchievementModel"]] = relationship(
+    user_achievements: Mapped[list["UserAchievementModel"]] = relationship(
         back_populates="achievement"
     )
 
@@ -152,7 +153,7 @@ class UserAchievementModel(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("achievements.id", ondelete="CASCADE")
     )
     progress: Mapped[int] = mapped_column(Integer, default=0)
-    unlocked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    unlocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped["UserModel"] = relationship(back_populates="achievements")
     achievement: Mapped["AchievementModel"] = relationship(back_populates="user_achievements")
@@ -176,7 +177,7 @@ class FriendRequestModel(Base, TimestampMixin):
     status: Mapped[FriendRequestStatus] = mapped_column(
         Enum(FriendRequestStatus), default=FriendRequestStatus.PENDING
     )
-    responded_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     from_user: Mapped["UserModel"] = relationship(foreign_keys=[from_user_id])
     to_user: Mapped["UserModel"] = relationship(foreign_keys=[to_user_id])
@@ -212,12 +213,12 @@ class PrivateSessionModel(Base, TimestampMixin):
         Enum(PrivateSessionStatus), default=PrivateSessionStatus.WAITING
     )
     max_players: Mapped[int] = mapped_column(Integer, default=4)
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     host: Mapped["UserModel"] = relationship()
     text: Mapped["TypingTextModel"] = relationship()
-    players: Mapped[List["SessionPlayerModel"]] = relationship(
+    players: Mapped[list["SessionPlayerModel"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
 
@@ -236,14 +237,14 @@ class SessionPlayerModel(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")
     )
     username: Mapped[str] = mapped_column(String(50))
-    avatar: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    avatar: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_host: Mapped[bool] = mapped_column(Boolean, default=False)
     is_ready: Mapped[bool] = mapped_column(Boolean, default=False)
     progress: Mapped[float] = mapped_column(Float, default=0.0)
     wpm: Mapped[int] = mapped_column(Integer, default=0)
     accuracy: Mapped[float] = mapped_column(Float, default=100.0)
-    position: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    finished_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     session: Mapped["PrivateSessionModel"] = relationship(back_populates="players")
     user: Mapped["UserModel"] = relationship()
@@ -262,7 +263,7 @@ class UserProgressModel(Base, TimestampMixin):
     current_level: Mapped[int] = mapped_column(Integer, default=1)
     current_streak: Mapped[int] = mapped_column(Integer, default=0)
     best_streak: Mapped[int] = mapped_column(Integer, default=0)
-    last_session_date: Mapped[Optional[datetime]] = mapped_column(
+    last_session_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     rank_tier: Mapped[RankTier] = mapped_column(

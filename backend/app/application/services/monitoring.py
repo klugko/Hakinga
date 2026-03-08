@@ -1,12 +1,11 @@
 """
 Monitoring and metrics service for system health and ML model monitoring.
 """
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
-from datetime import datetime, timedelta
-from collections import deque
-import time
 import threading
+from collections import deque
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any
 
 
 @dataclass
@@ -15,7 +14,7 @@ class MetricPoint:
     name: str
     value: float
     timestamp: datetime
-    labels: Dict[str, str] = field(default_factory=dict)
+    labels: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -41,7 +40,7 @@ class MLModelMetrics:
     precision: float
     recall: float
     drift_score: float  # 0-1, higher = more drift detected
-    last_retrained: Optional[datetime]
+    last_retrained: datetime | None
 
 
 @dataclass
@@ -51,10 +50,10 @@ class MLDecisionTrace:
     timestamp: datetime
     model_name: str
     user_id: str
-    input_data: Dict[str, Any]
+    input_data: dict[str, Any]
     output: Any
     confidence: float
-    decision_path: List[str]
+    decision_path: list[str]
     execution_time_ms: float
 
 
@@ -70,20 +69,20 @@ class MetricsCollector:
     """
 
     def __init__(self, max_history: int = 1000):
-        self._metrics: Dict[str, deque] = {}
+        self._metrics: dict[str, deque] = {}
         self._max_history = max_history
         self._request_times: deque = deque(maxlen=1000)
         self._error_count = 0
         self._request_count = 0
         self._ml_traces: deque = deque(maxlen=500)
-        self._ml_metrics: Dict[str, MLModelMetrics] = {}
+        self._ml_metrics: dict[str, MLModelMetrics] = {}
         self._lock = threading.Lock()
 
     def record_metric(
         self,
         name: str,
         value: float,
-        labels: Optional[Dict[str, str]] = None,
+        labels: dict[str, str] | None = None,
     ) -> MetricPoint:
         """
         Record a metric value.
@@ -113,8 +112,8 @@ class MetricsCollector:
     def get_metric_history(
         self,
         name: str,
-        since: Optional[datetime] = None,
-    ) -> List[MetricPoint]:
+        since: datetime | None = None,
+    ) -> list[MetricPoint]:
         """
         Get historical values for a metric.
 
@@ -195,10 +194,10 @@ class MetricsCollector:
         self,
         model_name: str,
         user_id: str,
-        input_data: Dict[str, Any],
+        input_data: dict[str, Any],
         output: Any,
         confidence: float,
-        decision_path: List[str],
+        decision_path: list[str],
         execution_time_ms: float,
     ) -> MLDecisionTrace:
         """
@@ -237,10 +236,10 @@ class MetricsCollector:
 
     def get_ml_traces(
         self,
-        model_name: Optional[str] = None,
-        user_id: Optional[str] = None,
+        model_name: str | None = None,
+        user_id: str | None = None,
         limit: int = 100,
-    ) -> List[MLDecisionTrace]:
+    ) -> list[MLDecisionTrace]:
         """
         Get ML decision traces.
 
@@ -271,7 +270,7 @@ class MetricsCollector:
         precision: float,
         recall: float,
         drift_score: float,
-        last_retrained: Optional[datetime] = None,
+        last_retrained: datetime | None = None,
     ) -> MLModelMetrics:
         """
         Update metrics for an ML model.
@@ -314,7 +313,7 @@ class MetricsCollector:
     def get_ml_model_metrics(
         self,
         model_name: str,
-    ) -> Optional[MLModelMetrics]:
+    ) -> MLModelMetrics | None:
         """
         Get metrics for an ML model.
 
@@ -327,7 +326,7 @@ class MetricsCollector:
         with self._lock:
             return self._ml_metrics.get(model_name)
 
-    def get_all_ml_model_metrics(self) -> Dict[str, MLModelMetrics]:
+    def get_all_ml_model_metrics(self) -> dict[str, MLModelMetrics]:
         """
         Get metrics for all ML models.
 
@@ -340,7 +339,7 @@ class MetricsCollector:
     def check_ml_health(
         self,
         model_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check health of an ML model.
 
@@ -394,7 +393,7 @@ class MetricsCollector:
             "last_updated": metrics.timestamp.isoformat(),
         }
 
-    def get_dashboard_data(self) -> Dict[str, Any]:
+    def get_dashboard_data(self) -> dict[str, Any]:
         """
         Get data for monitoring dashboard.
 
@@ -425,7 +424,7 @@ metrics_collector = MetricsCollector()
 
 
 # Convenience functions
-def record_metric(name: str, value: float, labels: Optional[Dict] = None) -> MetricPoint:
+def record_metric(name: str, value: float, labels: dict | None = None) -> MetricPoint:
     """Record a metric value."""
     return metrics_collector.record_metric(name, value, labels)
 
@@ -438,10 +437,10 @@ def record_request(response_time_ms: float, is_error: bool = False) -> None:
 def trace_ml_decision(
     model_name: str,
     user_id: str,
-    input_data: Dict,
+    input_data: dict,
     output: Any,
     confidence: float,
-    decision_path: List[str],
+    decision_path: list[str],
     execution_time_ms: float,
 ) -> MLDecisionTrace:
     """Trace an ML decision."""

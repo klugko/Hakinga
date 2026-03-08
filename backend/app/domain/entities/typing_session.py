@@ -4,7 +4,6 @@ Typing session domain entity.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 from uuid import UUID
 
 
@@ -47,9 +46,9 @@ class TypingSession:
     started_at: datetime
     completed_at: datetime
     mode: SessionMode
-    wpm_history: List[WpmDataPoint] = field(default_factory=list)
-    private_session_id: Optional[UUID] = None
-    competition_id: Optional[UUID] = None
+    wpm_history: list[WpmDataPoint] = field(default_factory=list)
+    private_session_id: UUID | None = None
+    competition_id: UUID | None = None
     max_combo: int = 0
     xp_earned: int = 0
 

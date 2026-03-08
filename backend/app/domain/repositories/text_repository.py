@@ -2,7 +2,6 @@
 Typing text repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.typing_text import Difficulty, TextLength, TypingText
@@ -27,7 +26,7 @@ class TextRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, text_id: UUID) -> Optional[TypingText]:
+    async def get_by_id(self, text_id: UUID) -> TypingText | None:
         """
         Get a text by ID.
 
@@ -42,9 +41,9 @@ class TextRepository(ABC):
     @abstractmethod
     async def get_random(
         self,
-        difficulty: Optional[Difficulty] = None,
-        length: Optional[TextLength] = None,
-    ) -> Optional[TypingText]:
+        difficulty: Difficulty | None = None,
+        length: TextLength | None = None,
+    ) -> TypingText | None:
         """
         Get a random active text with optional filters.
 
@@ -60,8 +59,8 @@ class TextRepository(ABC):
     @abstractmethod
     async def get_all(
         self,
-        difficulty: Optional[Difficulty] = None,
-        length: Optional[TextLength] = None,
+        difficulty: Difficulty | None = None,
+        length: TextLength | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> tuple[list[TypingText], int]:

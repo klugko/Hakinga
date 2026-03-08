@@ -6,7 +6,6 @@ Handles XP, levels, streaks, and ranking.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 
@@ -104,11 +103,11 @@ class UserProgress:
     current_level: int = 1
     current_streak: int = 0
     best_streak: int = 0
-    last_session_date: Optional[datetime] = None
+    last_session_date: datetime | None = None
     rank_tier: RankTier = RankTier.UNRANKED
     mmr: int = 1000
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     @staticmethod
     def calculate_xp_for_level(level: int) -> int:

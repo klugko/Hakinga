@@ -1,8 +1,7 @@
 """
 Tests for anti-cheat service.
 """
-import pytest
-from app.application.services.anti_cheat import AntiCheatService, ValidationResult
+from app.application.services.anti_cheat import AntiCheatService
 
 
 class TestAntiCheatService:

@@ -1,7 +1,6 @@
 """
 Typing text schemas.
 """
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -14,8 +13,8 @@ class TypingTextResponse(BaseModel):
     difficulty: str
     length: str
     word_count: int
-    category: Optional[str] = None
-    author: Optional[str] = None
+    category: str | None = None
+    author: str | None = None
 
 
 class TextListResponse(BaseModel):

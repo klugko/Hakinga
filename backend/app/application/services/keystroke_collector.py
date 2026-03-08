@@ -2,11 +2,11 @@
 Keystroke collection service for ML analysis.
 Collects and stores detailed keystroke data for pattern analysis.
 """
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
-from datetime import datetime
 import json
 import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
 
 
 @dataclass
@@ -17,13 +17,13 @@ class KeystrokeEvent:
     key: str
     expected_key: str
     correct: bool
-    time_since_last_ms: Optional[int]
-    key_down_duration_ms: Optional[int]
+    time_since_last_ms: int | None
+    key_down_duration_ms: int | None
     position_in_text: int
     position_in_word: int
     word_index: int
-    finger_used: Optional[str]  # Estimated finger
-    hand: Optional[str]  # "left" or "right"
+    finger_used: str | None  # Estimated finger
+    hand: str | None  # "left" or "right"
     shift_pressed: bool
     alt_pressed: bool
     ctrl_pressed: bool
@@ -36,9 +36,9 @@ class SessionKeystrokeData:
     user_id: str
     text_id: str
     started_at: datetime
-    completed_at: Optional[datetime]
-    keystrokes: List[KeystrokeEvent] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    completed_at: datetime | None
+    keystrokes: list[KeystrokeEvent] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -83,14 +83,14 @@ class KeystrokeCollectorService:
     }
 
     def __init__(self):
-        self._sessions: Dict[str, SessionKeystrokeData] = {}
+        self._sessions: dict[str, SessionKeystrokeData] = {}
 
     def start_session(
         self,
         session_id: str,
         user_id: str,
         text_id: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> SessionKeystrokeData:
         """
         Start a new keystroke collection session.
@@ -125,11 +125,11 @@ class KeystrokeCollectorService:
         position_in_text: int,
         position_in_word: int,
         word_index: int,
-        key_down_duration_ms: Optional[int] = None,
+        key_down_duration_ms: int | None = None,
         shift_pressed: bool = False,
         alt_pressed: bool = False,
         ctrl_pressed: bool = False,
-    ) -> Optional[KeystrokeEvent]:
+    ) -> KeystrokeEvent | None:
         """
         Record a single keystroke event.
 
@@ -190,7 +190,7 @@ class KeystrokeCollectorService:
     def end_session(
         self,
         session_id: str,
-    ) -> Optional[SessionKeystrokeData]:
+    ) -> SessionKeystrokeData | None:
         """
         End a keystroke collection session.
 
@@ -210,14 +210,14 @@ class KeystrokeCollectorService:
     def get_session(
         self,
         session_id: str,
-    ) -> Optional[SessionKeystrokeData]:
+    ) -> SessionKeystrokeData | None:
         """Get session data."""
         return self._sessions.get(session_id)
 
     def export_session_json(
         self,
         session_id: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Export session data as JSON.
 
@@ -339,7 +339,7 @@ class KeystrokeCollectorService:
     def aggregate_user_statistics(
         self,
         user_id: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Aggregate statistics for a user.
 
@@ -384,8 +384,8 @@ class KeystrokeCollectorService:
         accuracy = (total_correct / total_keystrokes * 100) if total_keystrokes > 0 else 0
 
         # Analyze finger usage
-        finger_counts: Dict[str, int] = {}
-        finger_errors: Dict[str, int] = {}
+        finger_counts: dict[str, int] = {}
+        finger_errors: dict[str, int] = {}
 
         for session in user_sessions:
             for k in session.keystrokes:

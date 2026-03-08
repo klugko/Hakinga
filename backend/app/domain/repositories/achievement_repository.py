@@ -2,7 +2,6 @@
 Achievement repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.achievement import Achievement, UserAchievement
@@ -19,7 +18,7 @@ class AchievementRepository(ABC):
         ...
 
     @abstractmethod
-    async def get_achievement_by_id(self, achievement_id: UUID) -> Optional[Achievement]:
+    async def get_achievement_by_id(self, achievement_id: UUID) -> Achievement | None:
         """Get an achievement by ID."""
         ...
 
@@ -41,7 +40,7 @@ class AchievementRepository(ABC):
         self,
         user_id: UUID,
         achievement_id: UUID,
-    ) -> Optional[UserAchievement]:
+    ) -> UserAchievement | None:
         """Get a specific user achievement."""
         ...
 

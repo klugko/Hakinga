@@ -2,10 +2,9 @@
 Prediction service for typing performance forecasting.
 Uses statistical models to predict future performance and detect patterns.
 """
-from dataclasses import dataclass
-from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
 import math
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 
 @dataclass
@@ -22,7 +21,7 @@ class SessionRecord:
 class WPMPrediction:
     """Predicted future WPM."""
     predicted_wpm: float
-    confidence_interval: Tuple[float, float]
+    confidence_interval: tuple[float, float]
     days_ahead: int
     trend: str  # "improving", "stable", "declining"
 
@@ -33,7 +32,7 @@ class PlateauDetection:
     is_plateau: bool
     plateau_duration_days: int
     current_avg_wpm: float
-    suggested_actions: List[str]
+    suggested_actions: list[str]
 
 
 @dataclass
@@ -42,7 +41,7 @@ class DailyInsight:
     insight_type: str
     title: str
     message: str
-    data: Optional[Dict] = None
+    data: dict | None = None
     priority: int = 1  # 1 = high, 2 = medium, 3 = low
 
 
@@ -52,7 +51,7 @@ class PerformanceExplanation:
     factor: str
     impact: str  # "positive", "negative", "neutral"
     explanation: str
-    recommendation: Optional[str] = None
+    recommendation: str | None = None
 
 
 class PredictionService:
@@ -75,9 +74,9 @@ class PredictionService:
 
     def predict_future_wpm(
         self,
-        session_history: List[SessionRecord],
+        session_history: list[SessionRecord],
         days_ahead: int = 30,
-    ) -> Optional[WPMPrediction]:
+    ) -> WPMPrediction | None:
         """
         Predict user's WPM in the future.
 
@@ -97,7 +96,7 @@ class PredictionService:
         sorted_sessions = sorted(session_history, key=lambda x: x.date)
 
         # Calculate daily averages
-        daily_wpm: Dict[datetime.date, List[float]] = {}
+        daily_wpm: dict[datetime.date, list[float]] = {}
         for session in sorted_sessions:
             day = session.date.date()
             if day not in daily_wpm:
@@ -164,7 +163,7 @@ class PredictionService:
 
     def detect_plateau(
         self,
-        session_history: List[SessionRecord],
+        session_history: list[SessionRecord],
     ) -> PlateauDetection:
         """
         Detect if user is in a performance plateau.
@@ -253,9 +252,9 @@ class PredictionService:
 
     def generate_daily_insights(
         self,
-        session_history: List[SessionRecord],
-        user_profile: Dict,
-    ) -> List[DailyInsight]:
+        session_history: list[SessionRecord],
+        user_profile: dict,
+    ) -> list[DailyInsight]:
         """
         Generate personalized daily insights.
 
@@ -361,9 +360,9 @@ class PredictionService:
 
     def explain_performance(
         self,
-        session_history: List[SessionRecord],
+        session_history: list[SessionRecord],
         recent_session: SessionRecord,
-    ) -> List[PerformanceExplanation]:
+    ) -> list[PerformanceExplanation]:
         """
         Provide explanations for recent performance.
 

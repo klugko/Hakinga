@@ -1,7 +1,6 @@
 """
 Achievement schemas.
 """
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -13,6 +12,6 @@ class AchievementResponse(BaseModel):
     name: str
     description: str
     icon: str
-    max_progress: Optional[int] = None
+    max_progress: int | None = None
     progress: int = 0
-    unlocked_at: Optional[str] = None
+    unlocked_at: str | None = None

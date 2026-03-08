@@ -1,10 +1,9 @@
 """
 Tests for pattern analysis service.
 """
-import pytest
 from app.application.services.pattern_analysis import (
-    PatternAnalysisService,
     KeystrokeData,
+    PatternAnalysisService,
 )
 
 

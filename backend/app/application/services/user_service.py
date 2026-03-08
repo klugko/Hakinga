@@ -3,8 +3,7 @@ User service.
 
 Handles user profile management and statistics.
 """
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID
 
 from app.domain.entities.user import User
@@ -45,9 +44,9 @@ class UserService:
     async def update_profile(
         self,
         user_id: UUID,
-        username: Optional[str] = None,
-        email: Optional[str] = None,
-        avatar: Optional[str] = None,
+        username: str | None = None,
+        email: str | None = None,
+        avatar: str | None = None,
     ) -> User:
         """
         Update user profile information.
@@ -83,7 +82,7 @@ class UserService:
         if avatar is not None:
             user.avatar = avatar if avatar else None
 
-        user.updated_at = datetime.now(timezone.utc)
+        user.updated_at = datetime.now(UTC)
         return await self._user_repo.update(user)
 
     async def delete_account(self, user_id: UUID) -> bool:

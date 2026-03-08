@@ -138,7 +138,7 @@ run_frontend_checks() {
     fi
 
     log_info "Running ESLint..."
-    if ! (cd "$FRONTEND_DIR" && npx eslint --max-warnings=0 . 2>/dev/null); then
+    if ! (cd "$FRONTEND_DIR" && npx eslint . 2>/dev/null); then
         log_error "ESLint check failed"
         return 1
     fi

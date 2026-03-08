@@ -4,7 +4,6 @@ Private session domain entity.
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 from uuid import UUID
 
 
@@ -28,14 +27,14 @@ class SessionPlayer:
     id: UUID
     user_id: UUID
     username: str
-    avatar: Optional[str] = None
+    avatar: str | None = None
     is_host: bool = False
     is_ready: bool = False
     progress: float = 0.0
     wpm: int = 0
     accuracy: float = 100.0
-    position: Optional[int] = None
-    finished_at: Optional[datetime] = None
+    position: int | None = None
+    finished_at: datetime | None = None
 
     def mark_ready(self) -> None:
         """Mark player as ready."""
@@ -68,9 +67,9 @@ class PrivateSession:
     status: PrivateSessionStatus
     max_players: int
     created_at: datetime
-    players: List[SessionPlayer] = field(default_factory=list)
-    started_at: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
+    players: list[SessionPlayer] = field(default_factory=list)
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
 
     @property
     def player_count(self) -> int:
@@ -117,7 +116,7 @@ class PrivateSession:
                 return True
         return False
 
-    def get_player(self, user_id: UUID) -> Optional[SessionPlayer]:
+    def get_player(self, user_id: UUID) -> SessionPlayer | None:
         """Get a player by user ID."""
         for player in self.players:
             if player.user_id == user_id:

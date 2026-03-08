@@ -3,7 +3,6 @@ Typing text domain entity.
 """
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 
@@ -36,8 +35,8 @@ class TypingText:
     difficulty: Difficulty
     length: TextLength
     word_count: int
-    category: Optional[str] = None
-    author: Optional[str] = None
+    category: str | None = None
+    author: str | None = None
     is_active: bool = True
 
     @classmethod

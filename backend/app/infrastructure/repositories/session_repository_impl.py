@@ -2,7 +2,6 @@
 Typing session repository PostgreSQL implementation.
 """
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -83,7 +82,7 @@ class PostgresSessionRepository(SessionRepository):
         await self._session.refresh(model)
         return self._to_entity(model)
 
-    async def get_by_id(self, session_id: UUID) -> Optional[TypingSession]:
+    async def get_by_id(self, session_id: UUID) -> TypingSession | None:
         result = await self._session.execute(
             select(TypingSessionModel).where(TypingSessionModel.id == session_id)
         )
@@ -93,9 +92,9 @@ class PostgresSessionRepository(SessionRepository):
     async def get_user_sessions(
         self,
         user_id: UUID,
-        mode: Optional[SessionMode] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        mode: SessionMode | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         sort_by: str = "completed_at",
         sort_order: str = "desc",
         limit: int = 20,

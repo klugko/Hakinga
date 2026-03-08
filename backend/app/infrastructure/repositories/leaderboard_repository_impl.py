@@ -2,7 +2,6 @@
 Leaderboard repository PostgreSQL implementation.
 """
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -20,8 +19,8 @@ class PostgresLeaderboardRepository(LeaderboardRepository):
 
     async def get_global_leaderboard(
         self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         limit: int = 20,
         offset: int = 0,
     ) -> tuple[list[LeaderboardEntry], int]:
@@ -84,9 +83,9 @@ class PostgresLeaderboardRepository(LeaderboardRepository):
     async def get_user_rank(
         self,
         user_id: UUID,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-    ) -> Optional[LeaderboardEntry]:
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> LeaderboardEntry | None:
         user_stats_query = select(
             func.max(TypingSessionModel.wpm).label("best_wpm"),
             func.avg(TypingSessionModel.accuracy).label("avg_accuracy"),
@@ -140,8 +139,8 @@ class PostgresLeaderboardRepository(LeaderboardRepository):
         self,
         user_id: UUID,
         friend_ids: list[UUID],
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> list[LeaderboardEntry]:
         all_user_ids = [user_id] + friend_ids
 

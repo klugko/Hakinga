@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { ComboState, ComboTierConfig } from '@/types';
 import { COMBO_TIERS } from '@/types';
+
+const PARTICLE_POSITIONS = [35, 42, 50, 58, 65];
 
 interface ComboCounterProps {
   combo: ComboState;
@@ -18,6 +20,8 @@ export function ComboCounter({
 }: ComboCounterProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [lastTier, setLastTier] = useState(combo.tier);
+
+  const particlePositions = useMemo(() => PARTICLE_POSITIONS, []);
 
   const tierConfig: ComboTierConfig = COMBO_TIERS[combo.tier];
 
@@ -110,16 +114,15 @@ export function ComboCounter({
         </div>
       )}
 
-      {/* Fire particles for fire animation */}
       {tierConfig.animation === 'fire' && combo.isActive && (
         <div className="absolute -inset-4 pointer-events-none">
-          {[...Array(5)].map((_, i) => (
+          {particlePositions.map((position, i) => (
             <div
               key={i}
               className="absolute w-2 h-2 rounded-full animate-fire-particle"
               style={{
                 backgroundColor: tierConfig.color,
-                left: `${30 + Math.random() * 40}%`,
+                left: `${position}%`,
                 bottom: 0,
                 animationDelay: `${i * 100}ms`,
               }}

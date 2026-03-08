@@ -2,7 +2,6 @@
 Typing session schemas.
 """
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -118,8 +117,8 @@ class SessionWithXPResponse(BaseModel):
     wpm_history: list[WpmDataPointSchema]
     max_combo: int = 0
     xp_earned: int = 0
-    xp_breakdown: Optional[XPBreakdownSchema] = None
-    level_info: Optional[LevelInfoSchema] = None
+    xp_breakdown: XPBreakdownSchema | None = None
+    level_info: LevelInfoSchema | None = None
     leveled_up: bool = False
-    new_level: Optional[int] = None
+    new_level: int | None = None
     new_streak: int = 0

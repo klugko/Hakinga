@@ -1,7 +1,6 @@
 """
 Friend repository PostgreSQL implementation.
 """
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import or_, select
@@ -51,7 +50,7 @@ class PostgresFriendRepository(FriendRepository):
         await self._session.refresh(model)
         return self._request_to_entity(model)
 
-    async def get_friend_request_by_id(self, request_id: UUID) -> Optional[FriendRequest]:
+    async def get_friend_request_by_id(self, request_id: UUID) -> FriendRequest | None:
         result = await self._session.execute(
             select(FriendRequestModel).where(FriendRequestModel.id == request_id)
         )
@@ -71,7 +70,7 @@ class PostgresFriendRepository(FriendRepository):
         self,
         from_user_id: UUID,
         to_user_id: UUID,
-    ) -> Optional[FriendRequest]:
+    ) -> FriendRequest | None:
         result = await self._session.execute(
             select(FriendRequestModel)
             .where(FriendRequestModel.from_user_id == from_user_id)
@@ -158,7 +157,7 @@ class PostgresFriendRepository(FriendRepository):
     async def get_sent_requests(
         self,
         user_id: UUID,
-        status: Optional[FriendRequestStatus] = None,
+        status: FriendRequestStatus | None = None,
     ) -> list[FriendRequest]:
         query = select(FriendRequestModel).where(FriendRequestModel.from_user_id == user_id)
 

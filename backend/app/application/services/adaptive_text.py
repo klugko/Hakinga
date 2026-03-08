@@ -2,7 +2,6 @@
 Adaptive text selection service.
 Dynamically adjusts text difficulty based on user performance.
 """
-from typing import Optional
 from dataclasses import dataclass
 
 from app.domain.entities.typing_text import Difficulty
@@ -38,8 +37,8 @@ class AdaptiveTextService:
     def recommend_difficulty(
         self,
         metrics: UserPerformanceMetrics,
-        last_difficulty: Optional[Difficulty] = None,
-        last_accuracy: Optional[float] = None,
+        last_difficulty: Difficulty | None = None,
+        last_accuracy: float | None = None,
     ) -> Difficulty:
         """
         Recommend the next text difficulty based on user performance.

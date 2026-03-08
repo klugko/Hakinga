@@ -4,7 +4,6 @@ Application configuration module.
 Loads and validates environment variables using Pydantic settings.
 """
 from functools import lru_cache
-from typing import List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,7 +31,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
-    cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     email_host: str = ""
     email_host_user: str = ""

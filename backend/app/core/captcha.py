@@ -2,10 +2,10 @@
 CAPTCHA validation service for bot protection.
 Supports hCaptcha and reCAPTCHA v3.
 """
-import httpx
 from dataclasses import dataclass
-from typing import Optional
 from enum import Enum
+
+import httpx
 
 from app.core.config import get_settings
 
@@ -21,9 +21,9 @@ class CaptchaProvider(Enum):
 class CaptchaResult:
     """Result of CAPTCHA verification."""
     success: bool
-    score: Optional[float] = None  # reCAPTCHA v3 score
+    score: float | None = None  # reCAPTCHA v3 score
     error_codes: list = None
-    hostname: Optional[str] = None
+    hostname: str | None = None
 
     def __post_init__(self):
         if self.error_codes is None:
@@ -68,7 +68,7 @@ class CaptchaService:
     async def verify(
         self,
         token: str,
-        remote_ip: Optional[str] = None,
+        remote_ip: str | None = None,
     ) -> CaptchaResult:
         """
         Verify a CAPTCHA token.
@@ -94,7 +94,7 @@ class CaptchaService:
     async def _verify_hcaptcha(
         self,
         token: str,
-        remote_ip: Optional[str] = None,
+        remote_ip: str | None = None,
     ) -> CaptchaResult:
         """Verify hCaptcha token."""
         secret = getattr(self.settings, 'hcaptcha_secret', None)
@@ -127,7 +127,7 @@ class CaptchaService:
     async def _verify_recaptcha(
         self,
         token: str,
-        remote_ip: Optional[str] = None,
+        remote_ip: str | None = None,
     ) -> CaptchaResult:
         """Verify reCAPTCHA v3 token."""
         secret = getattr(self.settings, 'recaptcha_secret', None)
@@ -171,7 +171,7 @@ class CaptchaService:
 
 
 # FastAPI dependency
-async def verify_captcha(token: Optional[str] = None) -> CaptchaResult:
+async def verify_captcha(token: str | None = None) -> CaptchaResult:
     """
     FastAPI dependency for CAPTCHA verification.
 

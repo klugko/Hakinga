@@ -2,7 +2,6 @@
 User settings repository interface.
 """
 from abc import ABC, abstractmethod
-from typing import Optional
 from uuid import UUID
 
 from app.domain.entities.settings import UserSettings
@@ -14,7 +13,7 @@ class SettingsRepository(ABC):
     """
 
     @abstractmethod
-    async def get_by_user_id(self, user_id: UUID) -> Optional[UserSettings]:
+    async def get_by_user_id(self, user_id: UUID) -> UserSettings | None:
         """
         Get settings for a user.
 

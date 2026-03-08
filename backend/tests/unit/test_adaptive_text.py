@@ -1,7 +1,6 @@
 """
 Tests for adaptive text service.
 """
-import pytest
 from app.application.services.adaptive_text import (
     AdaptiveTextService,
     UserPerformanceMetrics,

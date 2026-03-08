@@ -1,7 +1,7 @@
 """
 Common Pydantic schemas used across the API.
 """
-from typing import Any, Generic, Optional, TypeVar
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
@@ -12,9 +12,9 @@ class ApiResponse(BaseModel, Generic[T]):
     """Standard API response wrapper."""
 
     success: bool = True
-    data: Optional[T] = None
-    error: Optional[str] = None
-    code: Optional[str] = None
+    data: T | None = None
+    error: str | None = None
+    code: str | None = None
 
 
 class PaginatedResponse(BaseModel, Generic[T]):

@@ -3,8 +3,6 @@ Fatigue detection service for typing sessions.
 Detects when users are experiencing fatigue and suggests breaks.
 """
 from dataclasses import dataclass
-from typing import List, Optional
-from datetime import datetime, timedelta
 
 
 @dataclass
@@ -22,7 +20,7 @@ class FatigueAnalysis:
     """Complete fatigue analysis result."""
     is_fatigued: bool
     fatigue_level: float  # 0-100
-    indicators: List[FatigueIndicator]
+    indicators: list[FatigueIndicator]
     recommendation: str
     suggested_break_minutes: int
 
@@ -33,7 +31,7 @@ class FocusSession:
     session_type: str  # "warm_up", "intensive", "cooldown", "recovery"
     duration_minutes: int
     difficulty: str
-    focus_area: Optional[str]
+    focus_area: str | None
     description: str
 
 
@@ -56,9 +54,9 @@ class FatigueDetectionService:
 
     def detect_fatigue_in_session(
         self,
-        wpm_over_time: List[float],
-        accuracy_over_time: List[float],
-        error_rates: List[float],
+        wpm_over_time: list[float],
+        accuracy_over_time: list[float],
+        error_rates: list[float],
         session_duration_minutes: float,
     ) -> FatigueAnalysis:
         """
@@ -171,7 +169,7 @@ class FatigueDetectionService:
 
     def detect_daily_fatigue(
         self,
-        sessions_today: List[dict],
+        sessions_today: list[dict],
         total_typing_minutes: float,
     ) -> FatigueAnalysis:
         """
@@ -250,9 +248,9 @@ class FatigueDetectionService:
     def suggest_focus_sessions(
         self,
         user_profile: dict,
-        recent_fatigue: Optional[FatigueAnalysis] = None,
+        recent_fatigue: FatigueAnalysis | None = None,
         time_available_minutes: int = 30,
-    ) -> List[FocusSession]:
+    ) -> list[FocusSession]:
         """
         Suggest focus sessions based on user state.
 
@@ -304,7 +302,7 @@ class FatigueDetectionService:
                 duration_minutes=main_duration,
                 difficulty="medium" if skill_level == "beginner" else "hard",
                 focus_area=focus_area,
-                description=f"Main practice session" + (f" focusing on {focus_area}" if focus_area else ""),
+                description="Main practice session" + (f" focusing on {focus_area}" if focus_area else ""),
             ))
 
         # Cooldown
