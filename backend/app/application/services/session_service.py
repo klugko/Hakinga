@@ -78,13 +78,14 @@ class SessionService:
         uid = UUID(user_id) if isinstance(user_id, str) else user_id
 
         # Handle text_id - might be a UUID or a generated ID like "quote-123456"
+        # For external quotes, we set text_id to None (nullable in DB)
+        tid: UUID | None = None
         if isinstance(text_id, str):
             try:
                 tid = UUID(text_id)
             except ValueError:
-                # Generate a deterministic UUID from the text_id string
-                # This allows external quotes to have consistent IDs
-                tid = uuid4()
+                # External quote - use None since we store text_content directly
+                tid = None
         else:
             tid = text_id
 

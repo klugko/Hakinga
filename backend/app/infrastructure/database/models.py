@@ -98,7 +98,10 @@ class TypingSessionModel(Base):
     user_id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
-    text_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("typing_texts.id"))
+    # text_id is nullable to support external quotes (e.g., from type.fit API)
+    text_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("typing_texts.id"), nullable=True
+    )
     text_content: Mapped[str] = mapped_column(Text)
     wpm: Mapped[int] = mapped_column(Integer)
     raw_wpm: Mapped[int] = mapped_column(Integer)

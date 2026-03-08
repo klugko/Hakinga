@@ -34,7 +34,7 @@ class TypingSession:
 
     id: UUID
     user_id: UUID
-    text_id: UUID
+    text_id: UUID | None  # Nullable for external quotes (e.g., type.fit API)
     text_content: str
     wpm: int
     raw_wpm: int
