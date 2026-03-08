@@ -282,7 +282,7 @@ class SessionService:
             "sessions": [
                 {
                     "id": str(s.id),
-                    "text_id": str(s.text_id),
+                    "text_id": str(s.text_id) if s.text_id else None,
                     "wpm": s.wpm,
                     "raw_wpm": s.raw_wpm,
                     "accuracy": s.accuracy,

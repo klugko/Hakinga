@@ -21,31 +21,29 @@ async def get_leaderboard(
     period: str = Query("all", regex="^(all|month|week|today)$"),
 ) -> ApiResponse[LeaderboardResponse]:
     """Get the global leaderboard."""
-    entries, total = await leaderboard_service.get_leaderboard(
+    result = await leaderboard_service.get_global_leaderboard(
         page=page,
         limit=limit,
-        period=period,
+        time_range=period,
     )
-
-    pages = (total + limit - 1) // limit
 
     return ApiResponse(
         data=LeaderboardResponse(
             entries=[
                 LeaderboardEntryResponse(
-                    rank=entry.rank,
-                    user_id=str(entry.user_id),
-                    username=entry.username,
-                    avatar=entry.avatar,
-                    wpm=entry.wpm,
-                    accuracy=entry.accuracy,
-                    sessions_played=entry.sessions_played,
+                    rank=entry["rank"],
+                    user_id=entry["user_id"],
+                    username=entry["username"],
+                    avatar=entry["avatar"],
+                    wpm=entry["wpm"],
+                    accuracy=entry["accuracy"],
+                    sessions_played=entry["sessions_played"],
                 )
-                for entry in entries
+                for entry in result["entries"]
             ],
-            total=total,
-            page=page,
-            pages=pages,
+            total=result["total"],
+            page=result["page"],
+            pages=result["pages"],
         )
     )
 
@@ -58,27 +56,30 @@ async def get_friends_leaderboard(
     limit: int = Query(10, ge=1, le=100),
 ) -> ApiResponse[LeaderboardResponse]:
     """Get the friends-only leaderboard."""
-    entries, total = await leaderboard_service.get_friends_leaderboard(
-        user_id=str(current_user.id),
-        page=page,
-        limit=limit,
+    entries = await leaderboard_service.get_friends_leaderboard(
+        user_id=current_user.id,
     )
 
-    pages = (total + limit - 1) // limit
+    # Paginate the results manually
+    total = len(entries)
+    start = (page - 1) * limit
+    end = start + limit
+    paginated_entries = entries[start:end]
+    pages = (total + limit - 1) // limit if total > 0 else 1
 
     return ApiResponse(
         data=LeaderboardResponse(
             entries=[
                 LeaderboardEntryResponse(
-                    rank=entry.rank,
-                    user_id=str(entry.user_id),
-                    username=entry.username,
-                    avatar=entry.avatar,
-                    wpm=entry.wpm,
-                    accuracy=entry.accuracy,
-                    sessions_played=entry.sessions_played,
+                    rank=entry["rank"],
+                    user_id=entry["user_id"],
+                    username=entry["username"],
+                    avatar=entry["avatar"],
+                    wpm=entry["wpm"],
+                    accuracy=entry["accuracy"],
+                    sessions_played=entry["sessions_played"],
                 )
-                for entry in entries
+                for entry in paginated_entries
             ],
             total=total,
             page=page,
@@ -95,8 +96,8 @@ async def get_my_rank(
 ) -> ApiResponse[LeaderboardEntryResponse | None]:
     """Get the current user's rank on the leaderboard."""
     entry = await leaderboard_service.get_user_rank(
-        user_id=str(current_user.id),
-        period=period,
+        user_id=current_user.id,
+        time_range=period,
     )
 
     if entry is None:
@@ -104,12 +105,12 @@ async def get_my_rank(
 
     return ApiResponse(
         data=LeaderboardEntryResponse(
-            rank=entry.rank,
-            user_id=str(entry.user_id),
-            username=entry.username,
-            avatar=entry.avatar,
-            wpm=entry.wpm,
-            accuracy=entry.accuracy,
-            sessions_played=entry.sessions_played,
+            rank=entry["rank"],
+            user_id=entry["user_id"],
+            username=entry["username"],
+            avatar=entry["avatar"],
+            wpm=entry["wpm"],
+            accuracy=entry["accuracy"],
+            sessions_played=entry["sessions_played"],
         )
     )
