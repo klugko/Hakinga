@@ -81,8 +81,12 @@ class TypingTextModel(Base, TimestampMixin):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     content: Mapped[str] = mapped_column(Text)
-    difficulty: Mapped[Difficulty] = mapped_column(Enum(Difficulty))
-    length: Mapped[TextLength] = mapped_column(Enum(TextLength))
+    difficulty: Mapped[Difficulty] = mapped_column(
+        Enum(Difficulty, values_callable=lambda x: [e.value for e in x])
+    )
+    length: Mapped[TextLength] = mapped_column(
+        Enum(TextLength, values_callable=lambda x: [e.value for e in x])
+    )
     word_count: Mapped[int] = mapped_column(Integer)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -112,7 +116,9 @@ class TypingSessionModel(Base):
     duration: Mapped[int] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    mode: Mapped[SessionMode] = mapped_column(Enum(SessionMode))
+    mode: Mapped[SessionMode] = mapped_column(
+        Enum(SessionMode, values_callable=lambda x: [e.value for e in x])
+    )
     wpm_history: Mapped[list] = mapped_column(JSONB, default=list)
     private_session_id: Mapped[UUID | None] = mapped_column(
         PGUUID(as_uuid=True), nullable=True
@@ -178,7 +184,8 @@ class FriendRequestModel(Base, TimestampMixin):
         PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True
     )
     status: Mapped[FriendRequestStatus] = mapped_column(
-        Enum(FriendRequestStatus), default=FriendRequestStatus.PENDING
+        Enum(FriendRequestStatus, values_callable=lambda x: [e.value for e in x]),
+        default=FriendRequestStatus.PENDING
     )
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -213,7 +220,8 @@ class PrivateSessionModel(Base, TimestampMixin):
     )
     text_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("typing_texts.id"))
     status: Mapped[PrivateSessionStatus] = mapped_column(
-        Enum(PrivateSessionStatus), default=PrivateSessionStatus.WAITING
+        Enum(PrivateSessionStatus, values_callable=lambda x: [e.value for e in x]),
+        default=PrivateSessionStatus.WAITING
     )
     max_players: Mapped[int] = mapped_column(Integer, default=4)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -270,7 +278,8 @@ class UserProgressModel(Base, TimestampMixin):
         DateTime(timezone=True), nullable=True
     )
     rank_tier: Mapped[RankTier] = mapped_column(
-        Enum(RankTier), default=RankTier.UNRANKED
+        Enum(RankTier, values_callable=lambda x: [e.value for e in x]),
+        default=RankTier.UNRANKED
     )
     mmr: Mapped[int] = mapped_column(Integer, default=1000)
 
