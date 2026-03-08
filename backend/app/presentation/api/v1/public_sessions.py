@@ -6,14 +6,13 @@ import random
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from sqlalchemy import select
 
 from app.domain.entities.typing_text import Difficulty
 from app.infrastructure.database.models import TypingTextModel, UserModel
 from app.infrastructure.database.session import AsyncSessionLocal
-from app.presentation.api.v1.deps import CurrentUser
 from app.presentation.schemas.common import ApiResponse
 
 router = APIRouter()
@@ -435,7 +434,6 @@ async def check_matchmaking_loop(user_id: str, difficulty: str, websocket: WebSo
 @router.get("/status")
 async def get_queue_status(
     difficulty: str = "medium",
-    current_user: CurrentUser = Depends(),
 ) -> ApiResponse[dict]:
     """Get current queue status."""
     return ApiResponse(data={
