@@ -64,18 +64,19 @@ function PrivateSessionLobbyPage() {
     switch (message.type) {
       case 'player_joined': {
         // Map snake_case from backend to camelCase
-        const playerData = message.player as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const playerData = message.player as any;
         const mappedPlayer: Player = {
-          id: playerData.id as string,
-          username: playerData.username as string,
-          avatar: (playerData.avatar as string) || undefined,
-          isHost: (playerData.is_host ?? playerData.isHost) as boolean,
-          isReady: (playerData.is_ready ?? playerData.isReady) as boolean,
-          progress: (playerData.progress as number) || 0,
-          wpm: (playerData.wpm as number) || 0,
-          accuracy: (playerData.accuracy as number) || 100,
-          position: playerData.position as number | undefined,
-          finishedAt: playerData.finished_at as string | undefined,
+          id: playerData.id,
+          username: playerData.username,
+          avatar: playerData.avatar || undefined,
+          isHost: playerData.is_host ?? playerData.isHost ?? false,
+          isReady: playerData.is_ready ?? playerData.isReady ?? false,
+          progress: playerData.progress || 0,
+          wpm: playerData.wpm || 0,
+          accuracy: playerData.accuracy || 100,
+          position: playerData.position,
+          finishedAt: playerData.finished_at || playerData.finishedAt,
         };
         setPlayers(prev => {
           if (prev.find(p => p.id === mappedPlayer.id)) return prev;
