@@ -8,7 +8,9 @@ from app.presentation.api.v1 import (
     auth,
     friends,
     leaderboard,
+    private_sessions,
     progression,
+    public_sessions,
     sessions,
     settings,
     texts,
@@ -22,6 +24,8 @@ api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(users.router, prefix="/users", tags=["Users"])
 api_router.include_router(texts.router, prefix="/texts", tags=["Texts"])
 api_router.include_router(sessions.router, prefix="/sessions", tags=["Sessions"])
+api_router.include_router(private_sessions.router, prefix="/private-sessions", tags=["Private Sessions"])
+api_router.include_router(public_sessions.router, prefix="/public-sessions", tags=["Public Sessions"])
 api_router.include_router(leaderboard.router, prefix="/leaderboard", tags=["Leaderboard"])
 api_router.include_router(achievements.router, prefix="/achievements", tags=["Achievements"])
 api_router.include_router(friends.router, prefix="/friends", tags=["Friends"])
