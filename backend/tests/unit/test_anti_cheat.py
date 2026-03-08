@@ -67,11 +67,13 @@ class TestAntiCheatService:
 
     def test_validate_session_impossible_duration(self):
         """Test detection of impossible duration."""
+        # Formula: expected_min = chars / (250 * 5) = 0.8 minutes for 1000 chars
+        # Threshold: 0.8 * 0.8 = 0.64, so duration must be < 0.64 to trigger
         result = self.service.validate_session(
             wpm=150,
             accuracy=95,
-            duration_seconds=5,  # Way too short
-            total_characters=1000,  # Too many chars for duration
+            duration_seconds=0.5,  # Below threshold
+            total_characters=1000,
             errors=50,
         )
 

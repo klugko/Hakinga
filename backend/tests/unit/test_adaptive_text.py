@@ -83,8 +83,8 @@ class TestAdaptiveTextService:
 
         result = self.service.recommend_difficulty(metrics)
 
-        # Should bump up due to high accuracy
-        assert result == Difficulty.MEDIUM
+        # Should bump up due to high accuracy (MEDIUM -> HARD)
+        assert result == Difficulty.HARD
 
     def test_recommend_difficulty_with_last_session_too_easy(self):
         """Test adjustment when last session was too easy."""

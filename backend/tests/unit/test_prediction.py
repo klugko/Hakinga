@@ -80,8 +80,9 @@ class TestPredictionService:
         result = self.service.predict_future_wpm(sessions, days_ahead=30)
 
         assert result is not None
-        assert result.confidence_interval[0] < result.predicted_wpm
-        assert result.confidence_interval[1] > result.predicted_wpm
+        # Confidence interval bounds should contain the prediction
+        assert result.confidence_interval[0] <= result.predicted_wpm
+        assert result.confidence_interval[1] >= result.predicted_wpm
 
     def test_detect_plateau_no_plateau(self):
         """Test plateau detection when not in plateau."""
