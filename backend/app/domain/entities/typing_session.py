@@ -3,11 +3,11 @@ Typing session domain entity.
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class SessionMode(str, Enum):
+class SessionMode(StrEnum):
     """Session mode enumeration."""
 
     SOLO = "solo"

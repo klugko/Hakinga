@@ -3,11 +3,11 @@ Friend and friendship domain entities.
 """
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class FriendRequestStatus(str, Enum):
+class FriendRequestStatus(StrEnum):
     """Friend request status."""
 
     PENDING = "pending"
@@ -15,7 +15,7 @@ class FriendRequestStatus(str, Enum):
     REJECTED = "rejected"
 
 
-class UserStatus(str, Enum):
+class UserStatus(StrEnum):
     """User online status."""
 
     ONLINE = "online"

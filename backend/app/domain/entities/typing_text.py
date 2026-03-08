@@ -2,11 +2,11 @@
 Typing text domain entity.
 """
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class Difficulty(str, Enum):
+class Difficulty(StrEnum):
     """Text difficulty level."""
 
     EASY = "easy"
@@ -14,7 +14,7 @@ class Difficulty(str, Enum):
     HARD = "hard"
 
 
-class TextLength(str, Enum):
+class TextLength(StrEnum):
     """Text length category."""
 
     SHORT = "short"

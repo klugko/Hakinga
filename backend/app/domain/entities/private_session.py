@@ -3,11 +3,11 @@ Private session domain entity.
 """
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class PrivateSessionStatus(str, Enum):
+class PrivateSessionStatus(StrEnum):
     """Private session status."""
 
     WAITING = "waiting"

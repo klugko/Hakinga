@@ -5,11 +5,11 @@ Handles XP, levels, streaks, and ranking.
 """
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 
-class RankTier(str, Enum):
+class RankTier(StrEnum):
     """Competitive rank tiers."""
 
     UNRANKED = "unranked"
