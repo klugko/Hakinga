@@ -36,7 +36,7 @@ class SessionResponse(BaseModel):
 
     id: str
     user_id: str
-    text_id: str
+    text_id: str | None  # Nullable for external quotes
     wpm: int
     raw_wpm: int
     accuracy: float
@@ -54,7 +54,7 @@ class SessionListResponse(BaseModel):
     """Session list item."""
 
     id: str
-    text_id: str
+    text_id: str | None  # Nullable for external quotes
     wpm: int
     raw_wpm: int
     accuracy: float
@@ -103,7 +103,7 @@ class SessionWithXPResponse(BaseModel):
 
     id: str
     user_id: str
-    text_id: str
+    text_id: str | None  # Nullable for external quotes
     wpm: int
     raw_wpm: int
     accuracy: float
