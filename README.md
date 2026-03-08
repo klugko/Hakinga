@@ -228,15 +228,15 @@ docker compose logs -f
 ```
 
 The application will be available at:
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost (port 80)
 - **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
+- **API Documentation**: http://localhost:8000/api/v1/docs
 
 #### Docker Services
 
 | Service | Description | Port |
 |---------|-------------|------|
-| `frontend` | React SPA served by Nginx | 3000 |
+| `frontend` | React SPA served by Nginx | 80 |
 | `backend` | FastAPI application | 8000 |
 | `db` | PostgreSQL 16 database | 5432 |
 | `redis` | Redis cache | 6379 |
@@ -370,7 +370,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
 DATABASE_POOL_SIZE=5
 DATABASE_MAX_OVERFLOW=10
-CORS_ORIGINS=["http://localhost:3000"]
+CORS_ORIGINS=["http://localhost","http://localhost:80"]
 DEBUG=false
 RUN_MIGRATIONS=true
 
@@ -379,7 +379,7 @@ VITE_API_URL=http://localhost:8000/api/v1
 
 # Ports
 BACKEND_PORT=8000
-FRONTEND_PORT=3000
+FRONTEND_PORT=80
 ```
 
 </details>
