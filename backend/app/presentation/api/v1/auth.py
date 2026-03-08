@@ -150,3 +150,57 @@ async def change_password(
 async def logout(current_user: CurrentUser) -> ApiResponse[MessageResponse]:
     """Logout user (client should discard tokens)."""
     return ApiResponse(data=MessageResponse(message="Logged out successfully"))
+
+
+@router.post("/refresh", response_model=ApiResponse[AuthResponse])
+async def refresh_token(
+    refresh_token: str,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> ApiResponse[AuthResponse]:
+    """Refresh access token using refresh token."""
+    try:
+        user, new_access_token, new_refresh_token = await auth_service.refresh_token(
+            refresh_token=refresh_token,
+        )
+
+        user_response = UserResponse(
+            id=str(user.id),
+            username=user.username,
+            email=user.email,
+            avatar=user.avatar,
+            created_at=user.created_at,
+            stats=UserStatsResponse(
+                avg_wpm=user.stats.avg_wpm,
+                avg_accuracy=user.stats.avg_accuracy,
+                best_wpm=user.stats.best_wpm,
+                total_sessions=user.stats.total_sessions,
+                total_time_typed=user.stats.total_time_typed,
+                total_characters_typed=user.stats.total_characters_typed,
+            ),
+        )
+
+        return ApiResponse(
+            data=AuthResponse(
+                user=user_response,
+                access_token=new_access_token,
+                refresh_token=new_refresh_token,
+            )
+        )
+    except AuthenticationError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=e.message)
+
+
+@router.delete("/account", response_model=ApiResponse[MessageResponse])
+async def delete_account(
+    current_user: CurrentUser,
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> ApiResponse[MessageResponse]:
+    """Delete the current user's account permanently."""
+    try:
+        await auth_service.delete_account(user_id=str(current_user.id))
+        return ApiResponse(data=MessageResponse(message="Account deleted successfully"))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete account"
+        )

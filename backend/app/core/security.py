@@ -125,3 +125,35 @@ def verify_password_reset_token(token: str) -> str | None:
     if payload and payload.get("type") == "password_reset":
         return payload.get("sub")
     return None
+
+
+def verify_refresh_token(token: str) -> str | None:
+    """
+    Verify a refresh token and extract the user ID.
+
+    Args:
+        token: The refresh token.
+
+    Returns:
+        User ID if valid, None otherwise.
+    """
+    payload = decode_token(token)
+    if payload and payload.get("type") == "refresh":
+        return payload.get("sub")
+    return None
+
+
+def verify_access_token(token: str) -> str | None:
+    """
+    Verify an access token and extract the user ID.
+
+    Args:
+        token: The access token.
+
+    Returns:
+        User ID if valid, None otherwise.
+    """
+    payload = decode_token(token)
+    if payload and payload.get("type") == "access":
+        return payload.get("sub")
+    return None

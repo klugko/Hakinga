@@ -208,3 +208,64 @@ class AuthService:
         await self._user_repo.update(user)
 
         return True
+
+    async def refresh_token(self, refresh_token: str) -> tuple[User, str, str]:
+        """
+        Refresh access token using a refresh token.
+
+        Args:
+            refresh_token: Valid refresh token.
+
+        Returns:
+            Tuple of (user, new access token, new refresh token).
+
+        Raises:
+            AuthenticationError: If refresh token is invalid.
+        """
+        from app.core.security import verify_refresh_token
+
+        user_id = verify_refresh_token(refresh_token)
+        if not user_id:
+            raise AuthenticationError("Invalid or expired refresh token")
+
+        from uuid import UUID
+
+        user = await self._user_repo.get_by_id(UUID(user_id))
+        if not user:
+            raise AuthenticationError("User not found")
+
+        if not user.is_active:
+            raise AuthenticationError("Account is deactivated")
+
+        new_access_token = create_access_token(str(user.id))
+        new_refresh_token = create_refresh_token(str(user.id))
+
+        return user, new_access_token, new_refresh_token
+
+    async def delete_account(self, user_id: str) -> bool:
+        """
+        Delete a user's account permanently.
+
+        Args:
+            user_id: User's ID.
+
+        Returns:
+            True if account was deleted.
+
+        Raises:
+            EntityNotFoundError: If user not found.
+        """
+        from uuid import UUID
+
+        user = await self._user_repo.get_by_id(UUID(user_id))
+        if not user:
+            raise EntityNotFoundError("User", user_id)
+
+        # Soft delete by deactivating
+        user.is_active = False
+        user.email = f"deleted_{user.id}@deleted.local"
+        user.username = f"deleted_{user.id}"
+        user.updated_at = datetime.now(timezone.utc)
+        await self._user_repo.update(user)
+
+        return True
