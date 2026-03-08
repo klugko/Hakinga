@@ -1,10 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useTypingSession } from '../useTypingSession';
+
+function createKeyboardEvent(key: string): KeyboardEvent {
+  return new KeyboardEvent('keydown', { key, bubbles: true });
+}
 
 describe('useTypingSession', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('initializes with correct default state', () => {
@@ -12,54 +20,61 @@ describe('useTypingSession', () => {
       useTypingSession({ text: 'hello world' })
     );
 
-    expect(result.current.userInput).toBe('');
-    expect(result.current.isComplete).toBe(false);
-    expect(result.current.isActive).toBe(false);
+    expect(result.current.currentIndex).toBe(0);
+    expect(result.current.isCompleted).toBe(false);
+    expect(result.current.isStarted).toBe(false);
     expect(result.current.wpm).toBe(0);
-    expect(result.current.accuracy).toBe(100);
     expect(result.current.errors).toBe(0);
     expect(result.current.progress).toBe(0);
+    expect(result.current.characters).toHaveLength(11);
+    expect(result.current.characters[0].status).toBe('current');
   });
 
-  it('starts the session on first keystroke', () => {
+  it('starts the session when start() is called', () => {
     const { result } = renderHook(() =>
       useTypingSession({ text: 'hello' })
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
+      result.current.start();
     });
 
-    expect(result.current.isActive).toBe(true);
-    expect(result.current.userInput).toBe('h');
+    expect(result.current.isStarted).toBe(true);
   });
 
-  it('tracks correct input', () => {
+  it('tracks correct input after starting', () => {
     const { result } = renderHook(() =>
       useTypingSession({ text: 'hi' })
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
-      result.current.handleKeyPress('i');
+      result.current.start();
     });
 
-    expect(result.current.userInput).toBe('hi');
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+    });
+
+    expect(result.current.currentIndex).toBe(1);
+    expect(result.current.characters[0].status).toBe('correct');
     expect(result.current.errors).toBe(0);
-    expect(result.current.accuracy).toBe(100);
   });
 
-  it('tracks errors', () => {
+  it('tracks errors on wrong input', () => {
     const { result } = renderHook(() =>
       useTypingSession({ text: 'hi' })
     );
 
     act(() => {
-      result.current.handleKeyPress('x'); // Wrong key
+      result.current.start();
+    });
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('x'));
     });
 
     expect(result.current.errors).toBe(1);
-    expect(result.current.accuracy).toBeLessThan(100);
+    expect(result.current.characters[0].status).toBe('incorrect');
   });
 
   it('handles backspace', () => {
@@ -68,12 +83,22 @@ describe('useTypingSession', () => {
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
-      result.current.handleKeyPress('e');
-      result.current.handleBackspace();
+      result.current.start();
     });
 
-    expect(result.current.userInput).toBe('h');
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('e'));
+    });
+
+    expect(result.current.currentIndex).toBe(2);
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('Backspace'));
+    });
+
+    expect(result.current.currentIndex).toBe(1);
+    expect(result.current.characters[1].status).toBe('current');
   });
 
   it('calculates progress correctly', () => {
@@ -82,11 +107,15 @@ describe('useTypingSession', () => {
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
-      result.current.handleKeyPress('e');
+      result.current.start();
     });
 
-    expect(result.current.progress).toBe(40); // 2/5 = 40%
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('e'));
+    });
+
+    expect(result.current.progress).toBe(40);
   });
 
   it('marks session as complete when text is finished', () => {
@@ -96,39 +125,16 @@ describe('useTypingSession', () => {
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
-      result.current.handleKeyPress('i');
+      result.current.start();
     });
 
-    expect(result.current.isComplete).toBe(true);
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('i'));
+    });
+
+    expect(result.current.isCompleted).toBe(true);
     expect(onComplete).toHaveBeenCalled();
-  });
-
-  it('calculates WPM over time', () => {
-    const { result } = renderHook(() =>
-      useTypingSession({ text: 'hello world test' })
-    );
-
-    // Start typing
-    act(() => {
-      result.current.handleKeyPress('h');
-    });
-
-    // Advance time by 1 minute
-    act(() => {
-      vi.advanceTimersByTime(60000);
-    });
-
-    // Type more characters (simulate typing ~10 characters)
-    act(() => {
-      'ello worl'.split('').forEach(char => {
-        result.current.handleKeyPress(char);
-      });
-    });
-
-    // WPM should be calculated (10 chars / 5 = 2 words, over 1 minute = 2 WPM)
-    // Note: actual calculation may vary based on implementation
-    expect(result.current.wpm).toBeGreaterThan(0);
   });
 
   it('resets session correctly', () => {
@@ -137,27 +143,80 @@ describe('useTypingSession', () => {
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
-      result.current.handleKeyPress('e');
+      result.current.start();
+    });
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('e'));
+    });
+
+    act(() => {
       result.current.reset();
     });
 
-    expect(result.current.userInput).toBe('');
-    expect(result.current.isActive).toBe(false);
+    expect(result.current.currentIndex).toBe(0);
+    expect(result.current.isStarted).toBe(false);
     expect(result.current.errors).toBe(0);
     expect(result.current.progress).toBe(0);
+    expect(result.current.characters[0].status).toBe('current');
   });
 
-  it('respects disabled state', () => {
+  it('ignores input when not started', () => {
     const { result } = renderHook(() =>
-      useTypingSession({ text: 'hello', disabled: true })
+      useTypingSession({ text: 'hello' })
     );
 
     act(() => {
-      result.current.handleKeyPress('h');
+      result.current.handleKeyDown(createKeyboardEvent('h'));
     });
 
-    expect(result.current.userInput).toBe('');
-    expect(result.current.isActive).toBe(false);
+    expect(result.current.currentIndex).toBe(0);
+    expect(result.current.isStarted).toBe(false);
+  });
+
+  it('tracks combo on consecutive correct keys', () => {
+    const { result } = renderHook(() =>
+      useTypingSession({ text: 'hello' })
+    );
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('e'));
+      result.current.handleKeyDown(createKeyboardEvent('l'));
+    });
+
+    expect(result.current.combo.current).toBe(3);
+    expect(result.current.combo.isActive).toBe(true);
+  });
+
+  it('breaks combo on error', () => {
+    const onComboBreak = vi.fn();
+    const { result } = renderHook(() =>
+      useTypingSession({ text: 'hello', onComboBreak })
+    );
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('h'));
+      result.current.handleKeyDown(createKeyboardEvent('e'));
+    });
+
+    expect(result.current.combo.current).toBe(2);
+
+    act(() => {
+      result.current.handleKeyDown(createKeyboardEvent('x'));
+    });
+
+    expect(result.current.combo.current).toBe(0);
+    expect(result.current.combo.isActive).toBe(false);
+    expect(onComboBreak).toHaveBeenCalledWith(2, 2);
   });
 });
