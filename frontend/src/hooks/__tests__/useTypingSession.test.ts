@@ -130,6 +130,9 @@ describe('useTypingSession', () => {
 
     act(() => {
       result.current.handleKeyDown(createKeyboardEvent('h'));
+    });
+
+    act(() => {
       result.current.handleKeyDown(createKeyboardEvent('i'));
     });
 
@@ -186,7 +189,13 @@ describe('useTypingSession', () => {
 
     act(() => {
       result.current.handleKeyDown(createKeyboardEvent('h'));
+    });
+
+    act(() => {
       result.current.handleKeyDown(createKeyboardEvent('e'));
+    });
+
+    act(() => {
       result.current.handleKeyDown(createKeyboardEvent('l'));
     });
 
@@ -206,6 +215,9 @@ describe('useTypingSession', () => {
 
     act(() => {
       result.current.handleKeyDown(createKeyboardEvent('h'));
+    });
+
+    act(() => {
       result.current.handleKeyDown(createKeyboardEvent('e'));
     });
 
