@@ -123,10 +123,27 @@ function PrivateSessionLobbyPage() {
   }, [code, token, isLoading, handleWebSocketMessage]);
 
   const handleCopyCode = async () => {
-    await navigator.clipboard.writeText(code || '');
-    setCopied(true);
-    success('Session code copied!');
-    setTimeout(() => setCopied(false), 2000);
+    const textToCopy = code || '';
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // Fallback for non-HTTPS contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = textToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopied(true);
+      success('Session code copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
   };
 
   const handleToggleReady = async () => {
