@@ -3,6 +3,7 @@ Typing text API routes.
 """
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.application.services.text_service import TextService
@@ -12,6 +13,33 @@ from app.presentation.schemas.common import ApiResponse
 from app.presentation.schemas.text import TextListResponse, TypingTextResponse
 
 router = APIRouter()
+
+# Cache for external quotes
+_quotes_cache: list[dict] | None = None
+
+
+@router.get("/quotes")
+async def get_external_quotes() -> list[dict]:
+    """Proxy endpoint for type.fit quotes API to avoid CORS issues."""
+    global _quotes_cache
+
+    if _quotes_cache is not None:
+        return _quotes_cache
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://type.fit/api/quotes",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            _quotes_cache = response.json()
+            return _quotes_cache
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Failed to fetch quotes: {e!s}"
+        )
 
 
 @router.get("/random", response_model=ApiResponse[TypingTextResponse])

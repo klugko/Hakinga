@@ -20,10 +20,11 @@ let quoteCache: QuoteCache = {
   initialized: false,
 };
 
-// Fetch all quotes from type.fit API (returns ~1600 quotes)
+// Fetch all quotes via backend proxy (avoids CORS issues)
 async function fetchAllQuotes(): Promise<TypeFitQuote[]> {
   try {
-    const response = await fetch('https://type.fit/api/quotes');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const response = await fetch(`${apiUrl}/api/v1/texts/quotes`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
